@@ -7,7 +7,7 @@ import com.soda.powersense.alerts.data.local.AlertEntity
 import com.soda.powersense.auth.data.local.UserDao
 import com.soda.powersense.auth.data.local.UserEntity
 
-@Database(entities = [AlertEntity::class, UserEntity::class], version = 1, exportSchema = false)
+@Database(entities = [AlertEntity::class, UserEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase: RoomDatabase() {
 
     abstract fun alertDao(): AlertDao

@@ -20,7 +20,9 @@ object LocalModule {
             context = application,
             klass = AppDatabase::class.java,
             name = "PowerSense.db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides
     @Singleton

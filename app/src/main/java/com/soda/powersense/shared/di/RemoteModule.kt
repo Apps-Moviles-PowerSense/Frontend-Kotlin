@@ -3,6 +3,10 @@ package com.soda.powersense.shared.di
 import com.soda.powersense.alerts.data.remote.AlertService
 import com.soda.powersense.auth.data.local.UserDao
 import com.soda.powersense.auth.data.remote.AuthService
+import com.soda.powersense.dashboard.data.remote.DashboardService
+import com.soda.powersense.devices.data.remote.DeviceService
+import com.soda.powersense.reports.data.remote.ReportService
+import com.soda.powersense.schedules.data.remote.ScheduleService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -61,4 +65,24 @@ object RemoteModule {
     @Singleton
     fun providesAuthService(retrofit: Retrofit): AuthService =
         retrofit.create(AuthService::class.java)
+
+    @Provides
+    @Singleton
+    fun providesDeviceService(retrofit: Retrofit): DeviceService =
+        retrofit.create(DeviceService::class.java)
+
+    @Provides
+    @Singleton
+    fun providesDashboardService(retrofit: Retrofit): DashboardService =
+        retrofit.create(DashboardService::class.java)
+
+    @Provides
+    @Singleton
+    fun providesScheduleService(retrofit: Retrofit): ScheduleService =
+        retrofit.create(ScheduleService::class.java)
+
+    @Provides
+    @Singleton
+    fun providesReportService(retrofit: Retrofit): ReportService =
+        retrofit.create(ReportService::class.java)
 }
