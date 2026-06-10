@@ -30,7 +30,7 @@ import com.soda.powersense.schedules.data.local.ScheduleLocalEntity
         DepartmentMetricLocalEntity::class,
         ReportHistoryLocalEntity::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -13,6 +13,7 @@ fun ScheduleDto.toDomain(): Schedule {
         id = id,
         deviceId = deviceId,
         deviceName = deviceName,
+        roomName = roomName,
         startTime = onEntry?.time ?: "N/A",
         endTime = offEntry?.time ?: "N/A",
         days = days,
@@ -29,10 +30,12 @@ fun ScheduleDto.toEntity(): ScheduleLocalEntity {
         id = id,
         deviceId = deviceId,
         deviceName = deviceName,
+        roomName = roomName,
         startTime = onEntry?.time ?: "N/A",
         endTime = offEntry?.time ?: "N/A",
         days = days.joinToString(","),
-        enabled = enabled
+        enabled = enabled,
+        deviceCategory = "GENERIC_POWER" // Default since DTO doesn't have it yet
     )
 }
 
@@ -41,9 +44,11 @@ fun ScheduleLocalEntity.toDomain(): Schedule {
         id = id,
         deviceId = deviceId,
         deviceName = deviceName,
+        roomName = roomName,
         startTime = startTime,
         endTime = endTime,
         days = if (days.isEmpty()) emptyList() else days.split(","),
-        enabled = enabled
+        enabled = enabled,
+        deviceCategory = deviceCategory
     )
 }
