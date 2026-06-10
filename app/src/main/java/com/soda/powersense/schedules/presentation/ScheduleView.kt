@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.soda.powersense.devices.presentation.getPowerSenseSwitchColors
 import com.soda.powersense.schedules.domain.model.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -247,7 +248,7 @@ fun ScheduleItemCard(schedule: Schedule, onToggle: () -> Unit) {
                 Switch(
                     checked = schedule.enabled,
                     onCheckedChange = { onToggle() },
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF81C784))
+                    colors = getPowerSenseSwitchColors()
                 )
             }
             
@@ -323,7 +324,7 @@ fun SmartRuleItem(title: String, subtitle: String) {
             Switch(
                 checked = checked,
                 onCheckedChange = { checked = it },
-                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF81C784))
+                colors = getPowerSenseSwitchColors()
             )
         }
     }

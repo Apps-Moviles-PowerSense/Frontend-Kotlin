@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.soda.powersense.devices.presentation.getPowerSenseSwitchColors
 import com.soda.powersense.alerts.domain.model.Alert
 
 @Composable
@@ -238,13 +239,7 @@ fun SettingsToggleItem(title: String, subtitle: String, initialValue: Boolean) {
         Switch(
             checked = checked,
             onCheckedChange = { checked = it },
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF81C784),
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = Color(0xFFDFE3E8),
-                uncheckedBorderColor = Color.Transparent
-            )
+            colors = getPowerSenseSwitchColors()
         )
     }
 }

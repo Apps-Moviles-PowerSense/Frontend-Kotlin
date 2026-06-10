@@ -40,6 +40,20 @@ class DeviceViewModel @Inject constructor(
         }
     }
 
+    fun setAllDevicesStatus(active: Boolean) {
+        val status = if (active) "active" else "inactive"
+        viewModelScope.launch {
+            repository.setAllDevicesStatus(status)
+        }
+    }
+
+    fun setRoomDevicesStatus(roomId: String, active: Boolean) {
+        val status = if (active) "active" else "inactive"
+        viewModelScope.launch {
+            repository.setRoomDevicesStatus(roomId, status)
+        }
+    }
+
     fun toggleDevice(device: Device) {
         val nextStatus = if (device.status.lowercase() == "active") "inactive" else "active"
         viewModelScope.launch {

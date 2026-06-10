@@ -4,6 +4,7 @@ import com.soda.powersense.devices.data.local.DeviceDao
 import com.soda.powersense.devices.data.mapper.toDomain
 import com.soda.powersense.devices.data.mapper.toEntity
 import com.soda.powersense.devices.data.remote.DeviceService
+import com.soda.powersense.devices.data.remote.SetStatusRequest
 import com.soda.powersense.devices.domain.model.Device
 import com.soda.powersense.devices.domain.repository.DeviceRepository
 import jakarta.inject.Inject
@@ -45,6 +46,34 @@ class DeviceRepositoryImpl @Inject constructor(
                     dao.upsert(dto.toEntity())
                     Result.success(dto.toDomain())
                 } ?: Result.failure(Exception("Null response"))
+            } else {
+                Result.failure(Exception("Error: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun setAllDevicesStatus(status: String): Result<Unit> {
+        return try {
+            val response = service.setAllDevicesStatus(SetStatusRequest(status))
+            if (response.isSuccessful) {
+                syncDevices()
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Error: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun setRoomDevicesStatus(roomId: String, status: String): Result<Unit> {
+        return try {
+            val response = service.setRoomDevicesStatus(roomId, SetStatusRequest(status))
+            if (response.isSuccessful) {
+                syncDevices()
+                Result.success(Unit)
             } else {
                 Result.failure(Exception("Error: ${response.code()}"))
             }
