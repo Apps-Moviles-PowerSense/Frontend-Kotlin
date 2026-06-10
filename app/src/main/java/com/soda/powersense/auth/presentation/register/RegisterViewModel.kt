@@ -26,6 +26,10 @@ class RegisterViewModel @Inject constructor(
         _state.update { it.copy(password = password) }
     }
 
+    fun onConfirmPasswordChange(password: String) {
+        _state.update { it.copy(confirmPassword = password) }
+    }
+
     fun onNameChange(name: String) {
         _state.update { it.copy(name = name) }
     }
