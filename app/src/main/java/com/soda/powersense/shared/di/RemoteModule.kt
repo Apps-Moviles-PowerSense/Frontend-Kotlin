@@ -27,7 +27,7 @@ object RemoteModule {
     @Named("baseUrl")
     fun providesBaseUrl(): String =
         //"http://<Dirección IPv4>:8080/api/"
-        "http://192.168.1.135:8080/api/"
+        "http://10.11.149.89:8080/api/"
 
     @Provides
     @Singleton
