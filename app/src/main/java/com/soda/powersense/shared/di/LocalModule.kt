@@ -31,4 +31,20 @@ object LocalModule {
     @Provides
     @Singleton
     fun providesUserDao(appDatabase: AppDatabase) = appDatabase.userDao()
+
+    @Provides
+    @Singleton
+    fun providesDeviceDao(appDatabase: AppDatabase) = appDatabase.deviceDao()
+
+    @Provides
+    @Singleton
+    fun providesDashboardDao(appDatabase: AppDatabase) = appDatabase.dashboardDao()
+
+    @Provides
+    @Singleton
+    fun providesScheduleDao(appDatabase: AppDatabase) = appDatabase.scheduleDao()
+
+    @Provides
+    @Singleton
+    fun providesReportDao(appDatabase: AppDatabase) = appDatabase.reportDao()
 }

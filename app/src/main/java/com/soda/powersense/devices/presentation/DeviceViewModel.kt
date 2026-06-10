@@ -6,9 +6,7 @@ import com.soda.powersense.devices.domain.model.Device
 import com.soda.powersense.devices.domain.repository.DeviceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -20,18 +18,24 @@ class DeviceViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     init {
+        repository.getDevices()
+            .onEach { devices ->
+                _state.update { it.copy(devices = devices) }
+            }
+            .launchIn(viewModelScope)
+            
         loadDevices()
     }
 
     fun loadDevices() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            repository.getDevices()
-                .onSuccess { devices ->
-                    _state.update { it.copy(devices = devices, isLoading = false) }
-                }
+            repository.syncDevices()
                 .onFailure { error ->
                     _state.update { it.copy(error = error.message, isLoading = false) }
+                }
+                .onSuccess {
+                    _state.update { it.copy(isLoading = false, error = null) }
                 }
         }
     }
@@ -40,14 +44,8 @@ class DeviceViewModel @Inject constructor(
         val nextStatus = if (device.status.lowercase() == "active") "inactive" else "active"
         viewModelScope.launch {
             repository.setDeviceStatus(device.id, nextStatus)
-                .onSuccess { updated ->
-                    _state.update { currentState ->
-                        currentState.copy(
-                            devices = currentState.devices.map { d ->
-                                if (d.id == updated.id) updated else d
-                            }
-                        )
-                    }
+                .onFailure { error ->
+                    _state.update { it.copy(error = error.message) }
                 }
         }
     }
