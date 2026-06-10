@@ -33,23 +33,23 @@ enum class MainTab(
         iconFilled = Icons.Filled.Devices,
         route = DevicesRoute
     ),
-    Alerts(
-        label = "Alerts",
-        icon = Icons.Outlined.Notifications,
-        iconFilled = Icons.Filled.Notifications,
-        route = AlertsRoute
+    Schedules(
+        label = "Programación",
+        icon = Icons.Outlined.Schedule,
+        iconFilled = Icons.Filled.Schedule,
+        route = SchedulesRoute
     ),
     Reports(
-        label = "Reports",
+        label = "Reportes",
         icon = Icons.Outlined.Assessment,
         iconFilled = Icons.Filled.Assessment,
         route = ReportsRoute
     ),
-    Schedules(
-        label = "Schedules",
-        icon = Icons.Outlined.Schedule,
-        iconFilled = Icons.Filled.Schedule,
-        route = SchedulesRoute
+    Alerts(
+        label = "Alertas",
+        icon = Icons.Outlined.Notifications,
+        iconFilled = Icons.Filled.Notifications,
+        route = AlertsRoute
     ),
     Profile(
         label = "Perfil",
