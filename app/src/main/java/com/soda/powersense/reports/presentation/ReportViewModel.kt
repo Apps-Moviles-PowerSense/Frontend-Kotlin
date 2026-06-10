@@ -21,8 +21,16 @@ class ReportViewModel @Inject constructor(
             .onEach { kpis -> _state.update { it.copy(kpis = kpis) } }
             .launchIn(viewModelScope)
 
-        repository.getRealtimeConsumption()
-            .onEach { history -> _state.update { it.copy(consumptionHistory = history) } }
+        repository.getMonthlyComparison()
+            .onEach { items -> _state.update { it.copy(monthlyComparison = items) } }
+            .launchIn(viewModelScope)
+
+        repository.getDepartmentMetrics()
+            .onEach { items -> _state.update { it.copy(departmentMetrics = items) } }
+            .launchIn(viewModelScope)
+
+        repository.getReportHistory()
+            .onEach { items -> _state.update { it.copy(reportHistory = items) } }
             .launchIn(viewModelScope)
 
         loadData()
@@ -31,7 +39,7 @@ class ReportViewModel @Inject constructor(
     fun loadData() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            repository.syncReports("day")
+            repository.syncReports()
                 .onFailure { error ->
                     _state.update { it.copy(error = error.message, isLoading = false) }
                 }

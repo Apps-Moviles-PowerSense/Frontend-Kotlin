@@ -4,8 +4,7 @@ import com.soda.powersense.reports.data.local.ReportDao
 import com.soda.powersense.reports.data.mapper.toDomain
 import com.soda.powersense.reports.data.mapper.toEntity
 import com.soda.powersense.reports.data.remote.ReportService
-import com.soda.powersense.reports.domain.model.RealtimeConsumption
-import com.soda.powersense.reports.domain.model.ReportKPIs
+import com.soda.powersense.reports.domain.model.*
 import com.soda.powersense.reports.domain.repository.ReportRepository
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -20,23 +19,43 @@ class ReportRepositoryImpl @Inject constructor(
         return dao.getKPIs().map { it?.toDomain() }
     }
 
-    override fun getRealtimeConsumption(): Flow<List<RealtimeConsumption>> {
-        return dao.getHistory().map { entities ->
-            entities.map { it.toDomain() }
-        }
+    override fun getMonthlyComparison(): Flow<List<MonthlyComparison>> {
+        return dao.getMonthlyComparison().map { entities -> entities.map { it.toDomain() } }
     }
 
-    override suspend fun syncReports(period: String?): Result<Unit> {
-        return try {
-            val kpiResponse = service.getKPIs()
-            val historyResponse = service.getRealtimeConsumption(period)
+    override fun getDepartmentMetrics(): Flow<List<DepartmentMetric>> {
+        return dao.getDepartmentMetrics().map { entities -> entities.map { it.toDomain() } }
+    }
 
-            if (kpiResponse.isSuccessful && historyResponse.isSuccessful) {
-                kpiResponse.body()?.let { dao.upsertKPIs(it.toEntity()) }
-                historyResponse.body()?.let { dtos ->
-                    dao.clearHistory()
-                    dao.upsertHistory(dtos.map { it.toEntity() })
+    override fun getReportHistory(): Flow<List<ReportHistory>> {
+        return dao.getHistory().map { entities -> entities.map { it.toDomain() } }
+    }
+
+    override suspend fun syncReports(): Result<Unit> {
+        return try {
+            val kpiRes = service.getKPIs()
+            val monthlyRes = service.getMonthlyComparison()
+            val deptRes = service.getDepartmentMetrics()
+            val historyRes = service.getReportHistory()
+
+            if (kpiRes.isSuccessful && monthlyRes.isSuccessful && deptRes.isSuccessful && historyRes.isSuccessful) {
+                kpiRes.body()?.let { dao.upsertKPIs(it.toEntity()) }
+                
+                monthlyRes.body()?.let {
+                    dao.clearMonthly()
+                    dao.upsertMonthlyComparison(it.map { dto -> dto.toEntity() })
                 }
+                
+                deptRes.body()?.let {
+                    dao.clearDepartments()
+                    dao.upsertDepartmentMetrics(it.map { dto -> dto.toEntity() })
+                }
+                
+                historyRes.body()?.let {
+                    dao.clearHistory()
+                    dao.upsertHistory(it.map { dto -> dto.toEntity() })
+                }
+
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Error syncing reports"))
