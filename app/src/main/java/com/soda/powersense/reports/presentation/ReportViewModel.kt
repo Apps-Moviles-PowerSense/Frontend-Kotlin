@@ -5,9 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.soda.powersense.reports.domain.repository.ReportRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -19,28 +17,27 @@ class ReportViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     init {
+        repository.getKPIs()
+            .onEach { kpis -> _state.update { it.copy(kpis = kpis) } }
+            .launchIn(viewModelScope)
+
+        repository.getRealtimeConsumption()
+            .onEach { history -> _state.update { it.copy(consumptionHistory = history) } }
+            .launchIn(viewModelScope)
+
         loadData()
     }
 
     fun loadData() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            
-            val kpiResult = repository.getKPIs()
-            val consumptionResult = repository.getRealtimeConsumption("day")
-
-            if (kpiResult.isSuccess && consumptionResult.isSuccess) {
-                _state.update { it.copy(
-                    kpis = kpiResult.getOrNull(),
-                    consumptionHistory = consumptionResult.getOrDefault(emptyList()),
-                    isLoading = false
-                ) }
-            } else {
-                _state.update { it.copy(
-                    error = "Failed to load report data",
-                    isLoading = false
-                ) }
-            }
+            repository.syncReports("day")
+                .onFailure { error ->
+                    _state.update { it.copy(error = error.message, isLoading = false) }
+                }
+                .onSuccess {
+                    _state.update { it.copy(isLoading = false) }
+                }
         }
     }
 }

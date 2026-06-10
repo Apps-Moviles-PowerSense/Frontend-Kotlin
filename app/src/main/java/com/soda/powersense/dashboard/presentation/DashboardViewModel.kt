@@ -5,9 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.soda.powersense.dashboard.domain.repository.DashboardRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -19,15 +17,21 @@ class DashboardViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     init {
+        repository.getKPIs()
+            .onEach { kpis ->
+                _state.update { it.copy(kpis = kpis) }
+            }
+            .launchIn(viewModelScope)
+            
         loadKPIs()
     }
 
     fun loadKPIs() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            repository.getKPIs()
-                .onSuccess { kpis ->
-                    _state.update { it.copy(kpis = kpis, isLoading = false) }
+            repository.syncKPIs()
+                .onSuccess {
+                    _state.update { it.copy(isLoading = false) }
                 }
                 .onFailure { error ->
                     _state.update { it.copy(error = error.message, isLoading = false) }
