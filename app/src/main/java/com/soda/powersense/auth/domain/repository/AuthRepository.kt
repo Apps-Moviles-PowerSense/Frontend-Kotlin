@@ -7,5 +7,6 @@ interface AuthRepository {
     suspend fun login(email: String, password: String): Result<AuthResult>
     suspend fun register(email: String, password: String, name: String): Result<AuthResult>
     fun getSession(): Flow<AuthResult?>
+    suspend fun updateName(newName: String): Result<Unit>
     suspend fun logout()
 }

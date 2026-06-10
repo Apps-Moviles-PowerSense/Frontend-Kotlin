@@ -41,17 +41,6 @@ fun MainScreen(
     val currentDestination = navBackStackEntry?.destination
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    val currentTab = MainTab.entries.find { currentDestination?.hasRoute(it.route::class) == true }
-                    Text(text = currentTab?.label ?: "PowerSense")
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.White
-                )
-            )
-        },
         bottomBar = {
             Surface(
                 tonalElevation = 3.dp,

@@ -39,4 +39,10 @@ class ProfileViewModel @Inject constructor(
             repository.logout()
         }
     }
+
+    fun updateName(newName: String) {
+        viewModelScope.launch {
+            repository.updateName(newName)
+        }
+    }
 }
