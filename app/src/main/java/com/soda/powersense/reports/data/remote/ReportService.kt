@@ -8,8 +8,12 @@ interface ReportService {
     @GET("v1/analytics/reports/kpis")
     suspend fun getKPIs(): Response<ReportKPIsDto>
 
-    @GET("v1/analytics/reports/realtime-consumption")
-    suspend fun getRealtimeConsumption(
-        @Query("period") period: String? = null
-    ): Response<List<RealtimeConsumptionDto>>
+    @GET("v1/analytics/reports/monthly-comparison")
+    suspend fun getMonthlyComparison(): Response<List<MonthlyComparisonDto>>
+
+    @GET("v1/analytics/reports/departments")
+    suspend fun getDepartmentMetrics(): Response<List<DepartmentMetricDto>>
+
+    @GET("v1/analytics/reports/history")
+    suspend fun getReportHistory(): Response<List<ReportHistoryDto>>
 }

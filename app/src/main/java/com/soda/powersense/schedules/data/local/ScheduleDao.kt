@@ -13,10 +13,12 @@ data class ScheduleLocalEntity(
     val id: String,
     val deviceId: String,
     val deviceName: String,
+    val roomName: String,
     val startTime: String,
     val endTime: String,
     val days: String, // Stored as comma-separated string
-    val enabled: Boolean
+    val enabled: Boolean,
+    val deviceCategory: String
 )
 
 @Dao

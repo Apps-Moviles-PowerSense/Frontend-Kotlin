@@ -10,8 +10,10 @@ import com.soda.powersense.dashboard.data.local.DashboardDao
 import com.soda.powersense.dashboard.data.local.DashboardKPIsEntity
 import com.soda.powersense.devices.data.local.DeviceDao
 import com.soda.powersense.devices.data.local.DeviceEntity
-import com.soda.powersense.reports.data.local.ConsumptionLocalEntity
+import com.soda.powersense.reports.data.local.DepartmentMetricLocalEntity
+import com.soda.powersense.reports.data.local.MonthlyComparisonLocalEntity
 import com.soda.powersense.reports.data.local.ReportDao
+import com.soda.powersense.reports.data.local.ReportHistoryLocalEntity
 import com.soda.powersense.reports.data.local.ReportKPIsLocalEntity
 import com.soda.powersense.schedules.data.local.ScheduleDao
 import com.soda.powersense.schedules.data.local.ScheduleLocalEntity
@@ -24,9 +26,11 @@ import com.soda.powersense.schedules.data.local.ScheduleLocalEntity
         DashboardKPIsEntity::class,
         ScheduleLocalEntity::class,
         ReportKPIsLocalEntity::class,
-        ConsumptionLocalEntity::class
+        MonthlyComparisonLocalEntity::class,
+        DepartmentMetricLocalEntity::class,
+        ReportHistoryLocalEntity::class
     ],
-    version = 3,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

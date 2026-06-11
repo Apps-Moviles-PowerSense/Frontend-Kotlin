@@ -1,59 +1,74 @@
 package com.soda.powersense.reports.data.mapper
 
-import com.soda.powersense.reports.data.local.ConsumptionLocalEntity
-import com.soda.powersense.reports.data.local.ReportKPIsLocalEntity
-import com.soda.powersense.reports.data.remote.RealtimeConsumptionDto
-import com.soda.powersense.reports.data.remote.ReportKPIsDto
-import com.soda.powersense.reports.domain.model.RealtimeConsumption
-import com.soda.powersense.reports.domain.model.ReportKPIs
+import com.soda.powersense.reports.data.local.*
+import com.soda.powersense.reports.data.remote.*
+import com.soda.powersense.reports.domain.model.*
 
 fun ReportKPIsDto.toDomain(): ReportKPIs {
     return ReportKPIs(
-        dailyConsumption = totalConsumptionKWh / 30.0,
-        weeklyConsumption = totalConsumptionKWh / 4.0,
-        monthlyConsumption = totalConsumptionKWh,
-        costSaved = totalCostUSD * 0.1
+        totalConsumption = totalConsumptionKWh,
+        totalCost = totalCostUSD,
+        efficiency = efficiencyPct,
+        consumptionVariation = comparison.consumptionPct,
+        costVariation = comparison.costPct,
+        efficiencyVariation = comparison.efficiencyPct
     )
 }
 
 fun ReportKPIsDto.toEntity(): ReportKPIsLocalEntity {
     return ReportKPIsLocalEntity(
-        dailyConsumption = totalConsumptionKWh / 30.0,
-        weeklyConsumption = totalConsumptionKWh / 4.0,
-        monthlyConsumption = totalConsumptionKWh,
-        costSaved = totalCostUSD * 0.1
+        totalConsumption = totalConsumptionKWh,
+        totalCost = totalCostUSD,
+        efficiency = efficiencyPct,
+        consumptionVariation = comparison.consumptionPct,
+        costVariation = comparison.costPct,
+        efficiencyVariation = comparison.efficiencyPct
     )
 }
 
 fun ReportKPIsLocalEntity.toDomain(): ReportKPIs {
     return ReportKPIs(
-        dailyConsumption = dailyConsumption,
-        weeklyConsumption = weeklyConsumption,
-        monthlyConsumption = monthlyConsumption,
-        costSaved = costSaved
+        totalConsumption = totalConsumption,
+        totalCost = totalCost,
+        efficiency = efficiency,
+        consumptionVariation = consumptionVariation,
+        costVariation = costVariation,
+        efficiencyVariation = efficiencyVariation
     )
 }
 
-fun RealtimeConsumptionDto.toDomain(): RealtimeConsumption {
-    return RealtimeConsumption(
-        period = period,
-        label = name,
-        consumption = value
-    )
+fun MonthlyComparisonDto.toDomain(): MonthlyComparison {
+    return MonthlyComparison(month = month, value1 = y2023, value2 = y2024)
 }
 
-fun RealtimeConsumptionDto.toEntity(): ConsumptionLocalEntity {
-    return ConsumptionLocalEntity(
-        period = period,
-        label = name,
-        consumption = value
-    )
+fun MonthlyComparisonDto.toEntity(): MonthlyComparisonLocalEntity {
+    return MonthlyComparisonLocalEntity(month = month, value1 = y2023, value2 = y2024)
 }
 
-fun ConsumptionLocalEntity.toDomain(): RealtimeConsumption {
-    return RealtimeConsumption(
-        period = period,
-        label = label,
-        consumption = consumption
-    )
+fun MonthlyComparisonLocalEntity.toDomain(): MonthlyComparison {
+    return MonthlyComparison(month = month, value1 = value1, value2 = value2)
+}
+
+fun DepartmentMetricDto.toDomain(): DepartmentMetric {
+    return DepartmentMetric(department = department, current = currentPeriod, previous = previousPeriod)
+}
+
+fun DepartmentMetricDto.toEntity(): DepartmentMetricLocalEntity {
+    return DepartmentMetricLocalEntity(department = department, current = currentPeriod, previous = previousPeriod)
+}
+
+fun DepartmentMetricLocalEntity.toDomain(): DepartmentMetric {
+    return DepartmentMetric(department = department, current = current, previous = previous)
+}
+
+fun ReportHistoryDto.toDomain(): ReportHistory {
+    return ReportHistory(period = period, department = department, consumption = consumption, cost = cost, variation = variation)
+}
+
+fun ReportHistoryDto.toEntity(): ReportHistoryLocalEntity {
+    return ReportHistoryLocalEntity(period = period, department = department, consumption = consumption, cost = cost, variation = variation)
+}
+
+fun ReportHistoryLocalEntity.toDomain(): ReportHistory {
+    return ReportHistory(period = period, department = department, consumption = consumption, cost = cost, variation = variation)
 }

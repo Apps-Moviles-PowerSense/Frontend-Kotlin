@@ -1,10 +1,7 @@
 package com.soda.powersense.devices.data.remote
 
 import retrofit2.Response
-import retrofit2.http.GET
-import retrofit2.http.PATCH
-import retrofit2.http.Path
-import retrofit2.http.Query
+import retrofit2.http.*
 
 interface DeviceService {
 
@@ -24,4 +21,19 @@ interface DeviceService {
         @Path("id") id: String,
         @Query("status") status: String
     ): Response<DeviceDto>
+
+    @PATCH("v1/inventory/devices/status/all")
+    suspend fun setAllDevicesStatus(
+        @Body request: SetStatusRequest
+    ): Response<Void>
+
+    @PATCH("v1/inventory/devices/status/room/{roomId}")
+    suspend fun setRoomDevicesStatus(
+        @Path("roomId") roomId: String,
+        @Body request: SetStatusRequest
+    ): Response<Void>
 }
+
+data class SetStatusRequest(
+    val status: String
+)

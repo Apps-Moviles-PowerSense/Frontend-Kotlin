@@ -10,7 +10,12 @@ fun DashboardKPIsResponse.toDomain(): DashboardKPIs {
         activeDevices = activeDevices.toInt(),
         totalConsumption = totalConsumptionKWh,
         totalCost = totalCostUSD,
-        efficiency = efficiencyPct.toDouble()
+        efficiency = efficiencyPct,
+        monthlySavings = monthlySavings,
+        estimatedCost = estimatedMonthlyCost,
+        consumptionVariation = comparison.consumptionPct,
+        costVariation = comparison.costPct,
+        efficiencyVariation = comparison.efficiencyPct
     )
 }
 
@@ -20,7 +25,12 @@ fun DashboardKPIsResponse.toEntity(): DashboardKPIsEntity {
         activeDevices = activeDevices.toInt(),
         totalConsumption = totalConsumptionKWh,
         totalCost = totalCostUSD,
-        efficiency = efficiencyPct.toDouble()
+        efficiency = efficiencyPct,
+        monthlySavings = monthlySavings,
+        estimatedCost = estimatedMonthlyCost,
+        consumptionVariation = comparison.consumptionPct,
+        costVariation = comparison.costPct,
+        efficiencyVariation = comparison.efficiencyPct
     )
 }
 
@@ -30,6 +40,11 @@ fun DashboardKPIsEntity.toDomain(): DashboardKPIs {
         activeDevices = activeDevices,
         totalConsumption = totalConsumption,
         totalCost = totalCost,
-        efficiency = efficiency
+        efficiency = efficiency,
+        monthlySavings = monthlySavings,
+        estimatedCost = estimatedCost,
+        consumptionVariation = consumptionVariation,
+        costVariation = costVariation,
+        efficiencyVariation = efficiencyVariation
     )
 }

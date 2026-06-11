@@ -10,12 +10,17 @@ import kotlinx.coroutines.flow.Flow
 @Entity(tableName = "dashboard_kpis")
 data class DashboardKPIsEntity(
     @PrimaryKey
-    val id: Int = 1, // Single record
+    val id: Int = 1,
     val totalDevices: Int,
     val activeDevices: Int,
     val totalConsumption: Double,
     val totalCost: Double,
-    val efficiency: Double
+    val efficiency: Int,
+    val monthlySavings: Double,
+    val estimatedCost: Double,
+    val consumptionVariation: Int,
+    val costVariation: Int,
+    val efficiencyVariation: Int
 )
 
 @Dao

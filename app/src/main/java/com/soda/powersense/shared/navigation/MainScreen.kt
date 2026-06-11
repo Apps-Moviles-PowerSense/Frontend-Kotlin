@@ -1,14 +1,15 @@
 package com.soda.powersense.shared.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -29,7 +30,6 @@ import com.soda.powersense.reports.presentation.ReportView
 import com.soda.powersense.reports.presentation.ReportViewModel
 import com.soda.powersense.schedules.presentation.ScheduleView
 import com.soda.powersense.schedules.presentation.ScheduleViewModel
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,98 +39,117 @@ fun MainScreen(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "PowerSense",
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 16.dp),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
-                
-                MainTab.entries.forEach { tab ->
-                    val isSelected = currentDestination?.hasRoute(tab.route::class) == true
-                    
-                    NavigationDrawerItem(
-                        label = { Text(tab.label) },
-                        selected = isSelected,
-                        onClick = {
-                            navController.navigate(tab.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+    Scaffold(
+        bottomBar = {
+            Surface(
+                tonalElevation = 3.dp,
+                shadowElevation = 8.dp,
+                color = Color.White
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    MainTab.entries.forEach { tab ->
+                        val isSelected = currentDestination?.hasRoute(tab.route::class) == true
+                        
+                        Box(
+                            modifier = Modifier
+                                .width(100.dp) // Fixed width for each item to allow scrolling
+                                .fillMaxHeight()
+                        ) {
+                            NavigationItem(
+                                label = tab.label,
+                                icon = if (isSelected) tab.iconFilled else tab.icon,
+                                selected = isSelected,
+                                onClick = {
+                                    navController.navigate(tab.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                            scope.launch { drawerState.close() }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = if (isSelected) tab.iconFilled else tab.icon,
-                                contentDescription = tab.label
                             )
-                        },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
+                        }
+                    }
                 }
             }
         }
-    ) {
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        val currentTab = MainTab.entries.find { currentDestination?.hasRoute(it.route::class) == true }
-                        Text(text = currentTab?.label ?: "PowerSense")
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu")
-                        }
-                    }
+    ) { paddingValues ->
+        NavHost(
+            navController = navController,
+            startDestination = DashboardRoute,
+            modifier = Modifier.padding(paddingValues)
+        ) {
+            composable<DashboardRoute> {
+                val viewModel: DashboardViewModel = hiltViewModel()
+                DashboardView(viewModel = viewModel)
+            }
+            composable<DevicesRoute> {
+                val viewModel: DeviceViewModel = hiltViewModel()
+                DeviceView(viewModel = viewModel)
+            }
+            composable<AlertsRoute> {
+                val viewModel: AlertViewModel = hiltViewModel()
+                AlertsView(viewModel = viewModel)
+            }
+            composable<ReportsRoute> {
+                val viewModel: ReportViewModel = hiltViewModel()
+                ReportView(viewModel = viewModel)
+            }
+            composable<SchedulesRoute> {
+                val viewModel: ScheduleViewModel = hiltViewModel()
+                ScheduleView(viewModel = viewModel)
+            }
+            composable<ProfileRoute> {
+                val viewModel: ProfileViewModel = hiltViewModel()
+                ProfileView(
+                    viewModel = viewModel,
+                    onLogout = onLogout
                 )
             }
-        ) { paddingValues ->
-            NavHost(
-                navController = navController,
-                startDestination = DashboardRoute,
-                modifier = Modifier.padding(paddingValues)
-            ) {
-                composable<DashboardRoute> {
-                    val viewModel: DashboardViewModel = hiltViewModel()
-                    DashboardView(viewModel = viewModel)
-                }
-                composable<DevicesRoute> {
-                    val viewModel: DeviceViewModel = hiltViewModel()
-                    DeviceView(viewModel = viewModel)
-                }
-                composable<AlertsRoute> {
-                    val viewModel: AlertViewModel = hiltViewModel()
-                    AlertsView(viewModel = viewModel)
-                }
-                composable<ReportsRoute> {
-                    val viewModel: ReportViewModel = hiltViewModel()
-                    ReportView(viewModel = viewModel)
-                }
-                composable<SchedulesRoute> {
-                    val viewModel: ScheduleViewModel = hiltViewModel()
-                    ScheduleView(viewModel = viewModel)
-                }
-                composable<ProfileRoute> {
-                    val viewModel: ProfileViewModel = hiltViewModel()
-                    ProfileView(
-                        viewModel = viewModel,
-                        onLogout = onLogout
-                    )
-                }
-            }
+        }
+    }
+}
+
+@Composable
+fun NavigationItem(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val contentColor = if (selected) Color(0xFF81C784) else Color(0xFF919EAB)
+    
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = contentColor,
+                modifier = Modifier.size(26.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor,
+                maxLines = 1
+            )
         }
     }
 }
