@@ -9,4 +9,6 @@ interface DeviceRepository {
     suspend fun setDeviceStatus(id: String, status: String): Result<Device>
     suspend fun setAllDevicesStatus(status: String): Result<Unit>
     suspend fun setRoomDevicesStatus(roomId: String, status: String): Result<Unit>
+    suspend fun createDevice(name: String, category: String, roomId: String, roomName: String, watts: Int): Result<Device>
+    suspend fun updateDevice(id: String, roomName: String, watts: Int): Result<Device>
 }

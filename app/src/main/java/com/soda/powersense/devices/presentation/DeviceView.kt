@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Search
@@ -16,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.soda.powersense.devices.domain.model.Device
@@ -35,6 +37,8 @@ fun DeviceView(
     viewModel: DeviceViewModel
 ) {
     val state by viewModel.state.collectAsState()
+    var showRoomFilterMenu by remember { mutableStateOf(false) }
+    var showCategoryFilterMenu by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA))) {
         LazyColumn(
@@ -62,7 +66,7 @@ fun DeviceView(
             // Add Device Button
             item {
                 Button(
-                    onClick = { /* TODO */ },
+                    onClick = { viewModel.onOpenCreateDialog() },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7CB342)),
                     shape = RoundedCornerShape(8.dp)
@@ -117,8 +121,8 @@ fun DeviceView(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = "",
-                        onValueChange = {},
+                        value = state.searchQuery,
+                        onValueChange = viewModel::onSearchQueryChange,
                         placeholder = { Text("Buscar dispositivos...", fontSize = 14.sp) },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
@@ -127,11 +131,35 @@ fun DeviceView(
                             unfocusedContainerColor = Color.White,
                             focusedContainerColor = Color.White,
                             unfocusedBorderColor = Color(0xFFDFE3E8)
-                        )
+                        ),
+                        singleLine = true
                     )
                     
-                    FilterDropdown("Todas las habitaciones")
-                    FilterDropdown("Todos los tipos")
+                    Box {
+                        FilterDropdown(
+                            label = state.selectedRoom ?: "Todas las habitaciones",
+                            onClick = { showRoomFilterMenu = true }
+                        )
+                        DropdownMenu(expanded = showRoomFilterMenu, onDismissRequest = { showRoomFilterMenu = false }) {
+                            DropdownMenuItem(text = { Text("Todas") }, onClick = { viewModel.onRoomSelected(null); showRoomFilterMenu = false })
+                            state.allRooms.forEach { room ->
+                                DropdownMenuItem(text = { Text(room) }, onClick = { viewModel.onRoomSelected(room); showRoomFilterMenu = false })
+                            }
+                        }
+                    }
+
+                    Box {
+                        FilterDropdown(
+                            label = state.selectedCategory ?: "Todos los tipos",
+                            onClick = { showCategoryFilterMenu = true }
+                        )
+                        DropdownMenu(expanded = showCategoryFilterMenu, onDismissRequest = { showCategoryFilterMenu = false }) {
+                            DropdownMenuItem(text = { Text("Todos") }, onClick = { viewModel.onCategorySelected(null); showCategoryFilterMenu = false })
+                            state.allCategories.forEach { category ->
+                                DropdownMenuItem(text = { Text(category) }, onClick = { viewModel.onCategorySelected(category); showCategoryFilterMenu = false })
+                            }
+                        }
+                    }
                 }
             }
 
@@ -158,10 +186,11 @@ fun DeviceView(
             }
 
             // Device List
-            items(state.devices) { device ->
+            items(state.filteredDevices) { device ->
                 DeviceItemCard(
                     device = device,
-                    onToggle = { viewModel.toggleDevice(device) }
+                    onToggle = { viewModel.toggleDevice(device) },
+                    onConfigure = { viewModel.onOpenConfigureDialog(device) }
                 )
             }
 
@@ -176,7 +205,7 @@ fun DeviceView(
                 )
             }
 
-            items(state.rooms) { room ->
+            items(state.roomsSummary) { room ->
                 RoomControlCard(
                     room = room,
                     onTurnOff = { viewModel.setRoomDevicesStatus(room.id, false) },
@@ -185,6 +214,25 @@ fun DeviceView(
             }
             
             item { Spacer(modifier = Modifier.height(20.dp)) }
+        }
+
+        if (state.isCreateDialogOpen) {
+            CreateDeviceDialog(
+                onDismiss = { viewModel.onCloseCreateDialog() },
+                onConfirm = { name, category, roomId, roomName, watts ->
+                    viewModel.createDevice(name, category, roomId, roomName, watts)
+                }
+            )
+        }
+
+        state.deviceToConfigure?.let { device ->
+            ConfigureDeviceDialog(
+                device = device,
+                onDismiss = { viewModel.onCloseConfigureDialog() },
+                onConfirm = { roomName, watts ->
+                    viewModel.updateDevice(device.id, roomName, watts)
+                }
+            )
         }
     }
 }
@@ -211,25 +259,29 @@ fun SummaryStatCard(label: String, value: String, icon: ImageVector, color: Colo
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FilterDropdown(label: String) {
-    OutlinedTextField(
-        value = label,
-        onValueChange = {},
-        readOnly = true,
+fun FilterDropdown(label: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth().height(52.dp),
-        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
         shape = RoundedCornerShape(8.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = Color.White,
-            focusedContainerColor = Color.White,
-            unfocusedBorderColor = Color(0xFFDFE3E8)
-        )
-    )
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDFE3E8)),
+        color = Color.White
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = label, fontSize = 14.sp, color = if(label.startsWith("Todo")) Color.Gray else Color.Black)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.Gray)
+        }
+    }
 }
 
 @Composable
-fun DeviceItemCard(device: Device, onToggle: () -> Unit) {
+fun DeviceItemCard(device: Device, onToggle: () -> Unit, onConfigure: () -> Unit) {
     val isActive = device.status.lowercase() == "active"
     val icon = when(device.category.uppercase()) {
         "LIGHT" -> Icons.Default.Lightbulb
@@ -289,12 +341,12 @@ fun DeviceItemCard(device: Device, onToggle: () -> Unit) {
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            OutlinedButton(
-                onClick = { /* TODO */ },
+            Button(
+                onClick = onConfigure,
                 modifier = Modifier.fillMaxWidth().height(40.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFFF4F6F8), contentColor = Color(0xFF637381)),
-                border = null
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF4F6F8), contentColor = Color(0xFF637381)),
+                elevation = null
             ) {
                 Text("Configurar", fontSize = 14.sp)
             }
@@ -376,4 +428,149 @@ fun RoomControlCard(room: RoomSummary, onTurnOff: () -> Unit, onTurnOn: () -> Un
             )
         }
     }
+}
+
+@Composable
+fun CreateDeviceDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String, String, Int) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("LIGHT") }
+    var roomName by remember { mutableStateOf("") }
+    var watts by remember { mutableStateOf("") }
+
+    val categories = listOf(
+        "LIGHT" to "Iluminación",
+        "AC" to "Aire Acondicionado",
+        "TV" to "Televisor",
+        "REFRIGERATOR" to "Refrigerador",
+        "COMPUTER" to "Computadora",
+        "GENERIC_POWER" to "Genérico"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nuevo Dispositivo", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nombre del dispositivo") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Column {
+                    Text("Categoría", style = MaterialTheme.typography.labelMedium)
+                    var expanded by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(
+                            onClick = { expanded = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.DarkGray)
+                        ) {
+                            Text(categories.find { it.first == category }?.second ?: "Seleccionar")
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.ArrowDropDown, null)
+                        }
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            categories.forEach { (key, label) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        category = key
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = roomName,
+                    onValueChange = { roomName = it },
+                    label = { Text("Habitación (ej: Sala)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = watts,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) watts = it },
+                    label = { Text("Consumo (Watts)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { 
+                    val wattsInt = watts.toIntOrNull() ?: 0
+                    onConfirm(name, category, "room-${roomName.lowercase()}", roomName, wattsInt) 
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784)),
+                enabled = name.isNotBlank() && roomName.isNotBlank() && watts.isNotBlank()
+            ) {
+                Text("Agregar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = Color.Gray) }
+        }
+    )
+}
+
+@Composable
+fun ConfigureDeviceDialog(
+    device: Device,
+    onDismiss: () -> Unit,
+    onConfirm: (String, Int) -> Unit
+) {
+    var roomName by remember { mutableStateOf(device.roomName) }
+    var watts by remember { mutableStateOf(device.watts.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Configurar ${device.name}", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = roomName,
+                    onValueChange = { roomName = it },
+                    label = { Text("Habitación") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = watts,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) watts = it },
+                    label = { Text("Consumo (Watts)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { 
+                    val wattsInt = watts.toIntOrNull() ?: device.watts
+                    onConfirm(roomName, wattsInt) 
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784))
+            ) {
+                Text("Guardar Cambios")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = Color.Gray) }
+        }
+    )
 }

@@ -4,6 +4,12 @@ import com.soda.powersense.devices.domain.model.Device
 
 data class DeviceState(
     val devices: List<Device> = emptyList(),
+    val filteredDevices: List<Device> = emptyList(),
+    val searchQuery: String = "",
+    val selectedRoom: String? = null,
+    val selectedCategory: String? = null,
+    val isCreateDialogOpen: Boolean = false,
+    val deviceToConfigure: Device? = null,
     val isLoading: Boolean = false,
     val error: String? = null
 ) {
@@ -12,7 +18,10 @@ data class DeviceState(
     val inactiveCount: Int get() = totalCount - activeCount
     val totalConsumptionWatts: Int get() = devices.filter { it.status.lowercase() == "active" }.sumOf { it.watts }
     
-    val rooms: List<RoomSummary> get() = devices.groupBy { it.roomId to it.roomName }
+    val allRooms: List<String> get() = devices.map { it.roomName }.distinct().sorted()
+    val allCategories: List<String> get() = devices.map { it.category }.distinct().sorted()
+
+    val roomsSummary: List<RoomSummary> get() = devices.groupBy { it.roomId to it.roomName }
         .map { (roomInfo, roomDevices) ->
             RoomSummary(
                 id = roomInfo.first,
