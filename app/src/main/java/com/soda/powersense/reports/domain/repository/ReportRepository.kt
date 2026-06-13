@@ -8,5 +8,9 @@ interface ReportRepository {
     fun getMonthlyComparison(): Flow<List<MonthlyComparison>>
     fun getDepartmentMetrics(): Flow<List<DepartmentMetric>>
     fun getReportHistory(): Flow<List<ReportHistory>>
-    suspend fun syncReports(): Result<Unit>
+    suspend fun syncReports(
+        type: String? = null,
+        startDate: String? = null,
+        endDate: String? = null
+    ): Result<Unit>
 }

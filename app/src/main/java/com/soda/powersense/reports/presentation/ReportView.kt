@@ -19,12 +19,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.soda.powersense.reports.domain.model.*
+import java.text.SimpleDateFormat
+import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportView(
     viewModel: ReportViewModel
 ) {
     val state by viewModel.state.collectAsState()
+
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+
+    val startDatePickerState = rememberDatePickerState()
+    val endDatePickerState = rememberDatePickerState()
+
+    val dateFormatter = remember { 
+        SimpleDateFormat("dd/MM/yy", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA))) {
         LazyColumn(
@@ -42,7 +57,7 @@ fun ReportView(
                         color = Color(0xFF454F5B)
                     )
                     Text(
-                        text = "Analiza y compara el consumo energetico con reportes detallados",
+                        text = "Analiza y compara el consumo energético con reportes detallados",
                         fontSize = 14.sp,
                         color = Color(0xFF919EAB)
                     )
@@ -58,11 +73,44 @@ fun ReportView(
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        ReportFilterField(label = "Tipo de Reporte", value = "Diario")
+                        var expanded by remember { mutableStateOf(false) }
+                        val reportTypes = listOf("Diario", "Semanal", "Mensual")
+                        
+                        Box {
+                            ReportFilterField(
+                                label = "Tipo de Reporte", 
+                                value = state.reportType,
+                                onClick = { expanded = true }
+                            )
+                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                reportTypes.forEach { type ->
+                                    DropdownMenuItem(
+                                        text = { Text(type) },
+                                        onClick = {
+                                            viewModel.onReportTypeChange(type)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        
                         Spacer(modifier = Modifier.height(12.dp))
-                        ReportFilterField(label = "Fecha Inicio", value = "01/01/2025")
+                        ReportFilterField(
+                            label = "Fecha Inicio", 
+                            value = state.startDate,
+                            onValueChange = viewModel::onStartDateChange,
+                            readOnly = true,
+                            onClick = { showStartDatePicker = true }
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
-                        ReportFilterField(label = "Fecha Fin", value = "09/18/2025")
+                        ReportFilterField(
+                            label = "Fecha Fin", 
+                            value = state.endDate,
+                            onValueChange = viewModel::onEndDateChange,
+                            readOnly = true,
+                            onClick = { showEndDatePicker = true }
+                        )
                         Spacer(modifier = Modifier.height(20.dp))
                         Button(
                             onClick = { viewModel.loadData() },
@@ -70,7 +118,11 @@ fun ReportView(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7CB342)),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Aplicar Filtros", fontWeight = FontWeight.Bold)
+                            if (state.isLoading) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                            } else {
+                                Text("Aplicar Filtros", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -129,23 +181,82 @@ fun ReportView(
             item { Spacer(modifier = Modifier.height(20.dp)) }
         }
     }
+
+    if (showStartDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showStartDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    startDatePickerState.selectedDateMillis?.let {
+                        viewModel.onStartDateChange(dateFormatter.format(Date(it)))
+                    }
+                    showStartDatePicker = false
+                }) { Text("Confirmar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStartDatePicker = false }) { Text("Cancelar") }
+            }
+        ) {
+            DatePicker(state = startDatePickerState)
+        }
+    }
+
+    if (showEndDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showEndDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    endDatePickerState.selectedDateMillis?.let {
+                        viewModel.onEndDateChange(dateFormatter.format(Date(it)))
+                    }
+                    showEndDatePicker = false
+                }) { Text("Confirmar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndDatePicker = false }) { Text("Cancelar") }
+            }
+        ) {
+            DatePicker(state = endDatePickerState)
+        }
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportFilterField(label: String, value: String) {
+fun ReportFilterField(
+    label: String, 
+    value: String, 
+    onValueChange: (String) -> Unit = {}, 
+    readOnly: Boolean = true,
+    onClick: () -> Unit = {}
+) {
     Column {
         Text(text = label, fontSize = 12.sp, color = Color(0xFF919EAB), modifier = Modifier.padding(bottom = 4.dp))
         OutlinedTextField(
             value = value,
-            onValueChange = {},
-            readOnly = true,
+            onValueChange = onValueChange,
+            readOnly = true, // Force read only to capture clicks
             modifier = Modifier.fillMaxWidth(),
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+            trailingIcon = { 
+                IconButton(onClick = onClick) {
+                    Icon(if (label.contains("Fecha")) Icons.Default.CalendarToday else Icons.Default.ArrowDropDown, contentDescription = null) 
+                }
+            },
             shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = Color(0xFFDFE3E8),
                 focusedBorderColor = Color(0xFFDFE3E8)
-            )
+            ),
+            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                .also { interactionSource ->
+                    LaunchedEffect(interactionSource) {
+                        interactionSource.interactions.collect {
+                            if (it is androidx.compose.foundation.interaction.PressInteraction.Release) {
+                                onClick()
+                            }
+                        }
+                    }
+                }
         )
     }
 }

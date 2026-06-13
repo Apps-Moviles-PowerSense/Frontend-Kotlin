@@ -36,16 +36,30 @@ class ReportViewModel @Inject constructor(
         loadData()
     }
 
+    fun onReportTypeChange(type: String) {
+        _state.update { it.copy(reportType = type) }
+    }
+
+    fun onStartDateChange(date: String) {
+        _state.update { it.copy(startDate = date) }
+    }
+
+    fun onEndDateChange(date: String) {
+        _state.update { it.copy(endDate = date) }
+    }
+
     fun loadData() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            repository.syncReports()
-                .onFailure { error ->
-                    _state.update { it.copy(error = error.message, isLoading = false) }
-                }
-                .onSuccess {
-                    _state.update { it.copy(isLoading = false) }
-                }
+            repository.syncReports(
+                type = _state.value.reportType,
+                startDate = _state.value.startDate,
+                endDate = _state.value.endDate
+            ).onFailure { error ->
+                _state.update { it.copy(error = error.message, isLoading = false) }
+            }.onSuccess {
+                _state.update { it.copy(isLoading = false) }
+            }
         }
     }
 }

@@ -31,11 +31,11 @@ class ReportRepositoryImpl @Inject constructor(
         return dao.getHistory().map { entities -> entities.map { it.toDomain() } }
     }
 
-    override suspend fun syncReports(): Result<Unit> {
+    override suspend fun syncReports(type: String?, startDate: String?, endDate: String?): Result<Unit> {
         return try {
-            val kpiRes = service.getKPIs()
+            val kpiRes = service.getKPIs(type, startDate, endDate)
             val monthlyRes = service.getMonthlyComparison()
-            val deptRes = service.getDepartmentMetrics()
+            val deptRes = service.getDepartmentMetrics(type, startDate, endDate)
             val historyRes = service.getReportHistory()
 
             if (kpiRes.isSuccessful && monthlyRes.isSuccessful && deptRes.isSuccessful && historyRes.isSuccessful) {
