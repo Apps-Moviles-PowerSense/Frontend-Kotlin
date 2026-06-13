@@ -8,7 +8,9 @@ interface AlertRepository {
 
     suspend fun syncAlerts()
 
-    suspend fun acknowledgeAlert(id: String)
+    suspend fun acknowledgeAlert(id: String): Result<Unit>
+
+    suspend fun acknowledgeAllAlerts(): Result<Unit>
 
     suspend fun clearLocalAlerts()
 }

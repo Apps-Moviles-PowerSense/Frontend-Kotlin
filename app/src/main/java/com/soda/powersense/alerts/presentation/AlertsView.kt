@@ -18,8 +18,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.soda.powersense.devices.presentation.getPowerSenseSwitchColors
+import androidx.compose.ui.text.style.TextOverflow
 import com.soda.powersense.alerts.domain.model.Alert
+import com.soda.powersense.devices.presentation.getPowerSenseSwitchColors
 
 @Composable
 fun AlertsView(
@@ -27,11 +28,21 @@ fun AlertsView(
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showFilterDialog by remember { mutableStateOf(false) }
 
-    val errorCount = state.alerts.count { it.severity.uppercase() in listOf("CRITICAL", "ERROR") }
-    val warningCount = state.alerts.count { it.severity.uppercase() == "WARNING" }
-    val infoCount = state.alerts.count { it.severity.uppercase() == "INFO" }
+    val errorCount = state.alerts.count { it.severity.uppercase() in listOf("CRITICAL", "ERROR") && !it.acknowledged }
+    val warningCount = state.alerts.count { it.severity.uppercase() == "WARNING" && !it.acknowledged }
+    val infoCount = state.alerts.count { it.severity.uppercase() == "INFO" && !it.acknowledged }
     val completedCount = state.alerts.count { it.acknowledged }
+
+    val alertTypes = listOf(
+        "HIGH_CONSUMPTION",
+        "LOW_EFFICIENCY",
+        "DEVICE_OFFLINE",
+        "SCHEDULE_CONFLICT",
+        "THRESHOLD_EXCEEDED",
+        "CUSTOM"
+    )
 
     LaunchedEffect(state.error) {
         state.error?.let {
@@ -62,32 +73,40 @@ fun AlertsView(
                 }
             }
 
-            // Quick Action Buttons
+            // Filter Bar
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     OutlinedButton(
-                        onClick = { /* TODO */ },
+                        onClick = { showFilterDialog = true },
+                        modifier = Modifier.height(40.dp),
                         shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF637381))
                     ) {
-                        Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Filtrar", fontSize = 14.sp)
+                        Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (state.selectedType != null) state.selectedType!!.replace("_", " ").lowercase().capitalize() else "Filtrar",
+                            fontSize = 12.sp
+                        )
                     }
                     
-                    OutlinedButton(
-                        onClick = { /* TODO */ },
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF637381))
-                    ) {
-                        Text("Marcar todas como leídas", fontSize = 14.sp)
+                    if (state.selectedType != null) {
+                        IconButton(
+                            onClick = { viewModel.onTypeFilterSelected(null) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Limpiar filtro", tint = Color.Red, modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
             }
 
-            // Summary Card (Consolidated)
+            // Summary Card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -104,21 +123,34 @@ fun AlertsView(
                         SummaryItem(label = "Errores", count = errorCount, icon = Icons.Default.Error, color = Color(0xFFF44336))
                         SummaryItem(label = "Advertencias", count = warningCount, icon = Icons.Default.Warning, color = Color(0xFFFF9800))
                         SummaryItem(label = "Información", count = infoCount, icon = Icons.Default.Notifications, color = Color(0xFF2196F3))
-                        SummaryItem(label = "Completadas", count = completedCount, icon = Icons.Default.CheckCircle, color = Color(0xFF4CAF50))
+                        SummaryItem(label = "Leídas", count = completedCount, icon = Icons.Default.CheckCircle, color = Color(0xFF4CAF50))
                     }
                 }
             }
 
-            // Filter Chips
+            // Action Row: "Todas" chip + "Marcar todas" button
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AlertFilterChip("Todas (${state.alerts.size})", true)
-                    AlertFilterChip("No leídas", false)
-                    AlertFilterChip("Errores", false)
-                    AlertFilterChip("Advertencias", false)
+                    val unacknowledgedCount = state.alerts.count { !it.acknowledged }
+                    AlertFilterChip("Todas ($unacknowledgedCount)", state.selectedType == null) {
+                        viewModel.onTypeFilterSelected(null)
+                    }
+                    
+                    TextButton(
+                        onClick = { viewModel.acknowledgeAll() },
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        Text(
+                            text = "Marcar todas como leídas",
+                            color = Color(0xFF81C784),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
@@ -129,13 +161,16 @@ fun AlertsView(
                         CircularProgressIndicator()
                     }
                 }
-            } else if (state.alerts.isEmpty()) {
+            } else if (state.filteredAlerts.isEmpty()) {
                 item {
-                    Text("No se encontraron alertas", color = Color.Gray, modifier = Modifier.padding(vertical = 32.dp))
+                    Text("No se encontraron alertas nuevas", color = Color.Gray, modifier = Modifier.padding(vertical = 32.dp))
                 }
             } else {
-                items(state.alerts) { alert ->
-                    AlertItem(alert)
+                items(state.filteredAlerts) { alert ->
+                    AlertItem(
+                        alert = alert,
+                        onDelete = { id -> viewModel.acknowledgeAlert(id) }
+                    )
                 }
             }
 
@@ -177,6 +212,47 @@ fun AlertsView(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
+
+        if (showFilterDialog) {
+            AlertDialog(
+                onDismissRequest = { showFilterDialog = false },
+                title = { Text("Filtrar por tipo de alerta") },
+                text = {
+                    Column {
+                        alertTypes.forEach { type ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(if(state.selectedType == type) Color(0xFFE8F5E9) else Color.Transparent)
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = state.selectedType == type,
+                                    onClick = { 
+                                        viewModel.onTypeFilterSelected(type)
+                                        showFilterDialog = false 
+                                    },
+                                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF81C784))
+                                )
+                                Text(
+                                    text = type.replace("_", " ").lowercase().capitalize(),
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { 
+                        viewModel.onTypeFilterSelected(null)
+                        showFilterDialog = false 
+                    }) {
+                        Text("Limpiar filtros", color = Color.Gray)
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -202,11 +278,12 @@ fun SummaryItem(label: String, count: Int, icon: ImageVector, color: Color) {
 }
 
 @Composable
-fun AlertFilterChip(label: String, selected: Boolean) {
+fun AlertFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
         color = if (selected) Color(0xFFDFE3E8) else Color.White,
         shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.height(32.dp)
+        modifier = Modifier.height(32.dp),
+        onClick = onClick
     ) {
         Box(
             modifier = Modifier.padding(horizontal = 12.dp),
@@ -243,3 +320,5 @@ fun SettingsToggleItem(title: String, subtitle: String, initialValue: Boolean) {
         )
     }
 }
+
+private fun String.capitalize() = this.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
