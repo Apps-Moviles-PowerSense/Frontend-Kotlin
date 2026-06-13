@@ -41,8 +41,8 @@ data class ReportHistoryLocalEntity(
     val id: Int = 0,
     val period: String,
     val department: String,
-    val consumption: Int,
-    val cost: Int,
+    val consumption: Double,
+    val cost: Double,
     val variation: Int
 )
 

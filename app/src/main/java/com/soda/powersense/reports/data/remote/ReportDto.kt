@@ -20,17 +20,19 @@ data class MonthlyComparisonDto(
 )
 
 data class DepartmentMetricDto(
-    val department: String,
-    val currentPeriod: Int,
-    val previousPeriod: Int
+    val departmentId: String?,
+    val departmentName: String,
+    val metric: String?,
+    val currentPeriod: Double,
+    val previousPeriod: Double
 )
 
 data class ReportHistoryDto(
     val period: String,
     val department: String,
-    val consumption: Int,
-    val cost: Int,
-    val variation: Int
+    val consumptionKWh: Double,
+    val cost: Double,
+    val variationPct: Int
 )
 
 data class RealtimeConsumptionDto(

@@ -1,9 +1,12 @@
 package com.soda.powersense.reports.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,12 +16,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.soda.powersense.reports.domain.model.*
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,9 +33,12 @@ fun ReportView(
     viewModel: ReportViewModel
 ) {
     val state by viewModel.state.collectAsState()
-
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
+    var previewReport by remember { mutableStateOf<ReportHistory?>(null) }
 
     val startDatePickerState = rememberDatePickerState()
     val endDatePickerState = rememberDatePickerState()
@@ -161,25 +169,46 @@ fun ReportView(
 
             // Monthly Comparison Chart
             item {
-                ChartCard(title = "Consumo Mensual", subtitle = "Comparativa anual") {
+                ChartCard(
+                    title = "Consumo Mensual", 
+                    subtitle = "Comparativa anual",
+                    legend = listOf("2024" to Color(0xFF81C784), "2023" to Color(0xFF64B5F6))
+                ) {
                     MonthlyComparisonChart(state.monthlyComparison)
                 }
             }
 
             // Department Comparison Chart
             item {
-                ChartCard(title = "Comparativa por Departamentos", subtitle = "Consumo mensual") {
+                ChartCard(
+                    title = "Comparativa por Departamentos", 
+                    subtitle = "Consumo mensual",
+                    legend = listOf("Enero 2025" to Color(0xFF81C784), "Diciembre 2024" to Color(0xFFB39DDB))
+                ) {
                     DepartmentComparisonChart(state.departmentMetrics)
                 }
             }
 
             // History Table
             item {
-                HistorySection(state.reportHistory)
+                HistorySection(
+                    history = state.reportHistory,
+                    onPreview = { previewReport = it },
+                    onDownload = { report, format ->
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Descargando reporte de ${report.department} en formato $format...")
+                        }
+                    }
+                )
             }
             
             item { Spacer(modifier = Modifier.height(20.dp)) }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
     if (showStartDatePicker) {
@@ -218,6 +247,13 @@ fun ReportView(
         ) {
             DatePicker(state = endDatePickerState)
         }
+    }
+
+    previewReport?.let { report ->
+        ReportPreviewDialog(
+            report = report,
+            onDismiss = { previewReport = null }
+        )
     }
 }
 
@@ -282,14 +318,14 @@ fun ReportKPICard(title: String, value: String, variation: Int, icon: ImageVecto
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(text = value, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212B36))
                 
-                val variationColor = if (variation >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
+                val variationColor = if (variation <= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
                 Surface(
                     color = variationColor.copy(alpha = 0.1f),
                     shape = RoundedCornerShape(4.dp),
                     modifier = Modifier.padding(top = 8.dp)
                 ) {
                     Text(
-                        text = "${if (variation >= 0) "+" else ""}$variation% vs. mes anterior",
+                        text = "${if (variation > 0) "+" else ""}$variation% vs. mes anterior",
                         color = variationColor,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -302,7 +338,7 @@ fun ReportKPICard(title: String, value: String, variation: Int, icon: ImageVecto
 }
 
 @Composable
-fun ChartCard(title: String, subtitle: String, content: @Composable () -> Unit) {
+fun ChartCard(title: String, subtitle: String, legend: List<Pair<String, Color>>, content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -310,8 +346,19 @@ fun ChartCard(title: String, subtitle: String, content: @Composable () -> Unit) 
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212B36))
-            Text(text = subtitle, fontSize = 14.sp, color = Color(0xFF919EAB))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212B36))
+                    Text(text = subtitle, fontSize = 14.sp, color = Color(0xFF919EAB))
+                }
+                
+                // Dynamic Legend
+                Column(horizontalAlignment = Alignment.End) {
+                    legend.forEach { (label, color) ->
+                        LegendItem(label, color)
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(24.dp))
             content()
         }
@@ -319,22 +366,51 @@ fun ChartCard(title: String, subtitle: String, content: @Composable () -> Unit) 
 }
 
 @Composable
+fun LegendItem(label: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+        Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = label, fontSize = 11.sp, color = Color(0xFF919EAB))
+    }
+}
+
+@Composable
 fun MonthlyComparisonChart(data: List<MonthlyComparison>) {
-    // Simple bar chart implementation
+    if (data.isEmpty()) {
+        Box(Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
+            Text("No hay datos comparativos disponibles", color = Color.Gray, fontSize = 12.sp)
+        }
+        return
+    }
+    val scrollState = rememberScrollState()
+    val maxVal = (data.maxOfOrNull { maxOf(it.value1, it.value2) } ?: 100).coerceAtLeast(1)
+    
     Row(
-        modifier = Modifier.fillMaxWidth().height(150.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .horizontalScroll(scrollState),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         data.forEach { item ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Box(modifier = Modifier.width(12.dp).height((item.value1 / 5).dp).background(Color(0xFF81C784), RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)))
+                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.height(160.dp)) {
+                    val h1 = (160 * (item.value1.toFloat() / maxVal)).dp
+                    val h2 = (160 * (item.value2.toFloat() / maxVal)).dp
+                    
+                    Box(modifier = Modifier
+                        .width(14.dp)
+                        .height(h1)
+                        .background(Color(0xFF81C784), RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Box(modifier = Modifier.width(12.dp).height((item.value2 / 5).dp).background(Color(0xFF64B5F6), RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)))
+                    Box(modifier = Modifier
+                        .width(14.dp)
+                        .height(h2)
+                        .background(Color(0xFF64B5F6), RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = item.month, fontSize = 10.sp, color = Color(0xFF919EAB))
+                Text(text = item.month, fontSize = 12.sp, color = Color(0xFF919EAB))
             }
         }
     }
@@ -342,22 +418,52 @@ fun MonthlyComparisonChart(data: List<MonthlyComparison>) {
 
 @Composable
 fun DepartmentComparisonChart(data: List<DepartmentMetric>) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    if (data.isEmpty()) {
+        Box(Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
+            Text("No hay métricas por departamento", color = Color.Gray, fontSize = 12.sp)
+        }
+        return
+    }
+    val scrollState = rememberScrollState()
+    val maxVal = (data.maxOfOrNull { maxOf(it.current, it.previous) } ?: 100).coerceAtLeast(1)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .horizontalScroll(scrollState),
+        horizontalArrangement = Arrangement.spacedBy(24.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
         data.forEach { item ->
-            Column {
-                Text(text = item.department, fontSize = 12.sp, color = Color(0xFF212B36), modifier = Modifier.padding(bottom = 4.dp))
-                Row(modifier = Modifier.fillMaxWidth().height(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.weight(item.current.toFloat()).fillMaxHeight().background(Color(0xFF81C784), RoundedCornerShape(4.dp)))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.height(160.dp)) {
+                    val h1 = (160 * (item.current.toFloat() / maxVal)).dp
+                    val h2 = (160 * (item.previous.toFloat() / maxVal)).dp
+
+                    Box(modifier = Modifier
+                        .width(14.dp)
+                        .height(h1)
+                        .background(Color(0xFF81C784), RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Box(modifier = Modifier.weight(item.previous.toFloat()).fillMaxHeight().background(Color(0xFFB39DDB), RoundedCornerShape(4.dp)))
+                    Box(modifier = Modifier
+                        .width(14.dp)
+                        .height(h2)
+                        .background(Color(0xFFB39DDB), RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = item.department, fontSize = 11.sp, color = Color(0xFF919EAB))
             }
         }
     }
 }
 
 @Composable
-fun HistorySection(history: List<ReportHistory>) {
+fun HistorySection(
+    history: List<ReportHistory>,
+    onPreview: (ReportHistory) -> Unit,
+    onDownload: (ReportHistory, String) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -365,52 +471,146 @@ fun HistorySection(history: List<ReportHistory>) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text(text = "Historial de Reportes", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212B36))
-                    Text(text = "Reportes generados previamente", fontSize = 14.sp, color = Color(0xFF919EAB))
-                }
-                Row {
-                    IconButton(onClick = {}) { Icon(Icons.Outlined.FileDownload, contentDescription = "Export PDF") }
-                    IconButton(onClick = {}) { Icon(Icons.Outlined.FileDownload, contentDescription = "Export CSV", tint = Color(0xFF4CAF50)) }
-                }
-            }
+            // Title and Description
+            Text(text = "Historial de Reportes", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212B36))
+            Text(text = "Reportes generados previamente", fontSize = 14.sp, color = Color(0xFF919EAB))
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Header Row
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Periodo", modifier = Modifier.weight(1.5f), fontSize = 12.sp, color = Color(0xFF919EAB))
-                Text("Dept.", modifier = Modifier.weight(1.5f), fontSize = 12.sp, color = Color(0xFF919EAB))
-                Text("Cons.", modifier = Modifier.weight(1f), fontSize = 12.sp, color = Color(0xFF919EAB))
-                Text("Var.", modifier = Modifier.weight(1f), fontSize = 12.sp, color = Color(0xFF919EAB))
-                Text("Acc.", modifier = Modifier.weight(0.8f), fontSize = 12.sp, color = Color(0xFF919EAB))
+            // Global Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { /* All PDF */ },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f).height(40.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF637381))
+                ) {
+                    Icon(Icons.Outlined.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Exportar PDF", fontSize = 11.sp)
+                }
+                Button(
+                    onClick = { /* All CSV */ },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f).height(40.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784))
+                ) {
+                    Icon(Icons.Outlined.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Exportar CSV", fontSize = 11.sp)
+                }
             }
             
-            Divider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFF4F6F8))
+            Spacer(modifier = Modifier.height(24.dp))
             
-            history.forEach { item ->
-                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(item.period, modifier = Modifier.weight(1.5f), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF212B36))
-                    Text(item.department, modifier = Modifier.weight(1.5f), fontSize = 13.sp, color = Color(0xFF637381))
-                    Text("${item.consumption}kWh", modifier = Modifier.weight(1f), fontSize = 13.sp, color = Color(0xFF637381))
-                    
-                    val varColor = if (item.variation >= 0) Color(0xFFF44336) else Color(0xFF4CAF50)
-                    Text(
-                        "${if (item.variation >= 0) "+" else ""}${item.variation}%",
-                        modifier = Modifier.weight(1f),
-                        fontSize = 11.sp,
-                        color = varColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Row(modifier = Modifier.weight(0.8f), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Icon(Icons.Outlined.Visibility, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFF637381))
-                        Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFF637381))
-                    }
+            // Table with horizontal scroll to prevent text wrapping
+            val scrollState = rememberScrollState()
+            Column(modifier = Modifier.horizontalScroll(scrollState)) {
+                // Header Row
+                Row(
+                    modifier = Modifier.width(500.dp), // Fixed width for scrollable table
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Periodo", modifier = Modifier.width(100.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF919EAB))
+                    Text("Departamento", modifier = Modifier.width(120.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF919EAB))
+                    Text("Consumo", modifier = Modifier.width(80.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF919EAB))
+                    Text("Costo", modifier = Modifier.width(70.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF919EAB))
+                    Text("Var.", modifier = Modifier.width(60.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF919EAB))
+                    Text("Acc.", modifier = Modifier.width(70.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF919EAB), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
-                Divider(color = Color(0xFFF4F6F8))
+                
+                Divider(modifier = Modifier.padding(vertical = 12.dp).width(500.dp), color = Color(0xFFF4F6F8))
+                
+                history.forEach { item ->
+                    Row(
+                        modifier = Modifier.width(500.dp).padding(vertical = 8.dp), 
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(item.period, modifier = Modifier.width(100.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF212B36))
+                        Text(item.department, modifier = Modifier.width(120.dp), fontSize = 13.sp, color = Color(0xFF637381))
+                        Text("${item.consumption.toInt()} kWh", modifier = Modifier.width(80.dp), fontSize = 13.sp, color = Color(0xFF637381))
+                        Text("S/${item.cost.toInt()}", modifier = Modifier.width(70.dp), fontSize = 13.sp, color = Color(0xFF637381))
+                        
+                        val varColor = if (item.variation <= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
+                        Box(modifier = Modifier.width(60.dp)) {
+                            Surface(
+                                color = varColor.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "${if (item.variation > 0) "+" else ""}${item.variation}%",
+                                    fontSize = 10.sp,
+                                    color = varColor,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        
+                        Row(modifier = Modifier.width(70.dp), horizontalArrangement = Arrangement.Center) {
+                            IconButton(onClick = { onPreview(item) }, modifier = Modifier.size(28.dp)) {
+                                Icon(Icons.Outlined.Visibility, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF637381))
+                            }
+                            IconButton(onClick = { onDownload(item, "PDF") }, modifier = Modifier.size(28.dp)) {
+                                Icon(Icons.Outlined.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF637381))
+                            }
+                        }
+                    }
+                    Divider(modifier = Modifier.width(500.dp), color = Color(0xFFF4F6F8))
+                }
             }
         }
+    }
+}
+
+@Composable
+fun ReportPreviewDialog(
+    report: ReportHistory,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Previsualización de Reporte", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Se generará un documento con la siguiente información:", fontSize = 14.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.height(16.dp))
+                PreviewRow("Periodo:", report.period)
+                PreviewRow("Departamento:", report.department)
+                PreviewRow("Consumo Total:", "${report.consumption.toInt()} kWh")
+                PreviewRow("Costo Total:", "S/${report.cost.toInt()}")
+                PreviewRow("Variación:", "${report.variation}%")
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .background(Color(0xFFF4F6F8), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(48.dp))
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784))
+            ) {
+                Text("Cerrar")
+            }
+        }
+    )
+}
+
+@Composable
+fun PreviewRow(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(text = label, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+        Text(text = value, color = Color.DarkGray, fontSize = 13.sp)
     }
 }

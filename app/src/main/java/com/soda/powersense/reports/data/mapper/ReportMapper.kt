@@ -50,11 +50,11 @@ fun MonthlyComparisonLocalEntity.toDomain(): MonthlyComparison {
 }
 
 fun DepartmentMetricDto.toDomain(): DepartmentMetric {
-    return DepartmentMetric(department = department, current = currentPeriod, previous = previousPeriod)
+    return DepartmentMetric(department = departmentName, current = currentPeriod.toInt(), previous = previousPeriod.toInt())
 }
 
 fun DepartmentMetricDto.toEntity(): DepartmentMetricLocalEntity {
-    return DepartmentMetricLocalEntity(department = department, current = currentPeriod, previous = previousPeriod)
+    return DepartmentMetricLocalEntity(department = departmentName, current = currentPeriod.toInt(), previous = previousPeriod.toInt())
 }
 
 fun DepartmentMetricLocalEntity.toDomain(): DepartmentMetric {
@@ -62,11 +62,11 @@ fun DepartmentMetricLocalEntity.toDomain(): DepartmentMetric {
 }
 
 fun ReportHistoryDto.toDomain(): ReportHistory {
-    return ReportHistory(period = period, department = department, consumption = consumption, cost = cost, variation = variation)
+    return ReportHistory(period = period, department = department, consumption = consumptionKWh, cost = cost, variation = variationPct)
 }
 
 fun ReportHistoryDto.toEntity(): ReportHistoryLocalEntity {
-    return ReportHistoryLocalEntity(period = period, department = department, consumption = consumption, cost = cost, variation = variation)
+    return ReportHistoryLocalEntity(period = period, department = department, consumption = consumptionKWh, cost = cost, variation = variationPct)
 }
 
 fun ReportHistoryLocalEntity.toDomain(): ReportHistory {

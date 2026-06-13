@@ -11,8 +11,8 @@ data class ReportKPIs(
 
 data class MonthlyComparison(
     val month: String,
-    val value1: Int, // y2023 or previous
-    val value2: Int  // y2024 or current
+    val value1: Int,
+    val value2: Int
 )
 
 data class DepartmentMetric(
@@ -22,10 +22,11 @@ data class DepartmentMetric(
 )
 
 data class ReportHistory(
+    val id: String = "",
     val period: String,
     val department: String,
-    val consumption: Int,
-    val cost: Int,
+    val consumption: Double,
+    val cost: Double,
     val variation: Int
 )
 
