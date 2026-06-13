@@ -1,6 +1,7 @@
 package com.soda.powersense.schedules.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,16 +9,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.soda.powersense.devices.presentation.getPowerSenseSwitchColors
 import com.soda.powersense.schedules.domain.model.*
 
@@ -27,6 +30,7 @@ fun ScheduleView(
     viewModel: ScheduleViewModel
 ) {
     val state by viewModel.state.collectAsState()
+    var showRoomMenu by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA))) {
         LazyColumn(
@@ -54,7 +58,7 @@ fun ScheduleView(
             // New Schedule Button
             item {
                 Button(
-                    onClick = { /* TODO */ },
+                    onClick = { viewModel.onOpenCreateDialog() },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7CB342)),
                     shape = RoundedCornerShape(8.dp)
@@ -71,10 +75,13 @@ fun ScheduleView(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ScheduleFilterChip("Dispositivos", true)
-                    ScheduleFilterChip("Habitaciones", false)
-                    ScheduleFilterChip("Areas Comunes", false)
-                    ScheduleFilterChip("Reglas Automaticas", false)
+                    listOf("Dispositivos", "Habitaciones", "Areas Comunes", "Reglas").forEach { tab ->
+                        ScheduleFilterChip(
+                            label = tab, 
+                            selected = state.selectedTab == tab,
+                            onClick = { viewModel.onTabSelected(tab) }
+                        )
+                    }
                 }
             }
 
@@ -82,8 +89,8 @@ fun ScheduleView(
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
-                        value = "",
-                        onValueChange = {},
+                        value = state.searchQuery,
+                        onValueChange = viewModel::onSearchQueryChange,
                         placeholder = { Text("Buscar dispositivo...", fontSize = 14.sp) },
                         modifier = Modifier.weight(1f).height(48.dp),
                         leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
@@ -92,17 +99,43 @@ fun ScheduleView(
                             unfocusedContainerColor = Color.White,
                             focusedContainerColor = Color.White,
                             unfocusedBorderColor = Color(0xFFDFE3E8)
-                        )
+                        ),
+                        singleLine = true
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    OutlinedButton(
-                        onClick = { /* TODO */ },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(48.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF637381))
-                    ) {
-                        Text("Todas las habitacione", fontSize = 12.sp)
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    
+                    Box {
+                        OutlinedButton(
+                            onClick = { showRoomMenu = true },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(48.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF637381))
+                        ) {
+                            Text(state.selectedRoom ?: "Habitaciones", fontSize = 12.sp)
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                        }
+                        
+                        DropdownMenu(
+                            expanded = showRoomMenu,
+                            onDismissRequest = { showRoomMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Todas") },
+                                onClick = { 
+                                    viewModel.onRoomSelected(null)
+                                    showRoomMenu = false 
+                                }
+                            )
+                            state.rooms.forEach { room ->
+                                DropdownMenuItem(
+                                    text = { Text(room) },
+                                    onClick = { 
+                                        viewModel.onRoomSelected(room)
+                                        showRoomMenu = false 
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -117,12 +150,23 @@ fun ScheduleView(
             }
 
             // Active Schedules
-            if (state.schedules.isEmpty()) {
+            if (state.filteredSchedules.isEmpty()) {
                 item {
-                    Text("No hay programaciones configuradas", color = Color.Gray)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            "No se encontraron programaciones con los filtros actuales", 
+                            color = Color.Gray,
+                            modifier = Modifier.padding(24.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                 }
             } else {
-                items(state.schedules) { schedule ->
+                items(state.filteredSchedules) { schedule ->
                     ScheduleItemCard(
                         schedule = schedule,
                         onToggle = { viewModel.toggleSchedule(schedule) }
@@ -158,7 +202,7 @@ fun ScheduleView(
             // Statistics
             item {
                 Text(
-                    text = "Estadisticas",
+                    text = "Estadísticas",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF454F5B)
@@ -172,9 +216,9 @@ fun ScheduleView(
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        StatRow("Dispositivos programados", "2/3")
-                        StatRow("Horarios activos", "24")
-                        StatRow("Ahorro estimado", "15%", Color(0xFF4CAF50))
+                        StatRow("Dispositivos programados", state.stats.scheduledDevices)
+                        StatRow("Horarios activos", state.stats.activeSchedules.toString())
+                        StatRow("Ahorro estimado", "${state.stats.estimatedSavings}%", Color(0xFF4CAF50))
                     }
                 }
             }
@@ -189,7 +233,7 @@ fun ScheduleView(
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text("Reglas Inteligentes", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Spacer(modifier = Modifier.height(16.dp))
-                        SmartRuleItem("Modo Nocturno", "Apaga luces automaticamente")
+                        SmartRuleItem("Modo Nocturno", "Apaga luces automáticamente")
                         SmartRuleItem("Ahorro de Energía", "Optimiza según tarifas")
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
@@ -208,7 +252,198 @@ fun ScheduleView(
             
             item { Spacer(modifier = Modifier.height(20.dp)) }
         }
+
+        if (state.isCreateDialogOpen) {
+            CreateScheduleDialog(
+                devices = state.availableDevices,
+                onDismiss = { viewModel.onCloseCreateDialog() },
+                onConfirm = { deviceId, start, end, days ->
+                    viewModel.createSchedule(deviceId, start, end, days)
+                }
+            )
+        }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateScheduleDialog(
+    devices: List<com.soda.powersense.devices.domain.model.Device>,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String, List<String>) -> Unit
+) {
+    var selectedDeviceId by remember { mutableStateOf(devices.firstOrNull()?.id ?: "") }
+    var startTime by remember { mutableStateOf("08:00") }
+    var endTime by remember { mutableStateOf("18:00") }
+    val selectedDays = remember { mutableStateListOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY") }
+    
+    var showStartTimePicker by remember { mutableStateOf(false) }
+    var showEndTimePicker by remember { mutableStateOf(false) }
+
+    val daysOfWeek = listOf(
+        "MONDAY" to "Lun", "TUESDAY" to "Mar", "WEDNESDAY" to "Mié", 
+        "THURSDAY" to "Jue", "FRIDAY" to "Vie", "SATURDAY" to "Sáb", "SUNDAY" to "Dom"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nueva Programación", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Device Selector
+                Column {
+                    Text("Dispositivo", style = MaterialTheme.typography.labelMedium)
+                    var expanded by remember { mutableStateOf(false) }
+                    val selectedDeviceName = devices.find { it.id == selectedDeviceId }?.name ?: "Seleccionar"
+                    
+                    Box {
+                        OutlinedButton(
+                            onClick = { expanded = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.DarkGray)
+                        ) {
+                            Text(selectedDeviceName)
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.ArrowDropDown, null)
+                        }
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            devices.forEach { device ->
+                                DropdownMenuItem(
+                                    text = { Text(device.name) },
+                                    onClick = {
+                                        selectedDeviceId = device.id
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Time Pickers
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TimeDisplayField(
+                        label = "Encendido",
+                        time = startTime,
+                        onClick = { showStartTimePicker = true },
+                        modifier = Modifier.weight(1f)
+                    )
+                    TimeDisplayField(
+                        label = "Apagado",
+                        time = endTime,
+                        onClick = { showEndTimePicker = true },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Days Selector
+                Column {
+                    Text("Días", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        daysOfWeek.forEach { (key, label) ->
+                            val isSelected = selectedDays.contains(key)
+                            Surface(
+                                color = if (isSelected) Color(0xFF81C784) else Color(0xFFF4F6F8),
+                                shape = CircleShape,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clickable {
+                                        if (isSelected) selectedDays.remove(key) else selectedDays.add(key)
+                                    },
+                                border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDFE3E8))
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = label.take(1),
+                                        fontSize = 12.sp,
+                                        color = if (isSelected) Color.White else Color.Gray,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(selectedDeviceId, startTime, endTime, selectedDays.toList()) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784)),
+                enabled = selectedDeviceId.isNotEmpty()
+            ) {
+                Text("Crear")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = Color.Gray) }
+        }
+    )
+
+    if (showStartTimePicker) {
+        TimePickerDialog(
+            onDismiss = { showStartTimePicker = false },
+            onConfirm = { hour, minute ->
+                startTime = String.format("%02d:%02d", hour, minute)
+                showStartTimePicker = false
+            }
+        )
+    }
+
+    if (showEndTimePicker) {
+        TimePickerDialog(
+            onDismiss = { showEndTimePicker = false },
+            onConfirm = { hour, minute ->
+                endTime = String.format("%02d:%02d", hour, minute)
+                showEndTimePicker = false
+            }
+        )
+    }
+}
+
+@Composable
+fun TimeDisplayField(label: String, time: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp)
+                .clickable { onClick() },
+            shape = RoundedCornerShape(8.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDFE3E8)),
+            color = Color.White
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(time, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Icon(Icons.Outlined.AccessTime, null, modifier = Modifier.size(18.dp), tint = Color.Gray)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimePickerDialog(onDismiss: () -> Unit, onConfirm: (Int, Int) -> Unit) {
+    val state = rememberTimePickerState()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onConfirm(state.hour, state.minute) }) { Text("OK", color = Color(0xFF81C784)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = Color.Gray) }
+        },
+        text = { TimePicker(state = state) }
+    )
 }
 
 @Composable
@@ -237,10 +472,26 @@ fun ScheduleItemCard(schedule: Schedule, onToggle: () -> Unit) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = schedule.deviceName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212B36))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(4.dp)) {
-                            Text("Activo", color = Color(0xFF4CAF50), fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
+                        Text(
+                            text = schedule.deviceName, 
+                            fontSize = 18.sp, 
+                            fontWeight = FontWeight.Bold, 
+                            color = Color(0xFF212B36),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (schedule.enabled) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(4.dp)) {
+                                Text(
+                                    text = "Activo", 
+                                    color = Color(0xFF4CAF50), 
+                                    fontSize = 10.sp, 
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), 
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                     Text(text = schedule.roomName, fontSize = 14.sp, color = Color(0xFF919EAB))
@@ -270,7 +521,7 @@ fun ScheduleTimeInfo(label: String, time: String, days: String, dotColor: Color)
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = label, fontSize = 12.sp, color = Color(0xFF919EAB))
         }
-        Text(text = "$time- $days", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF454F5B), modifier = Modifier.padding(start = 16.dp))
+        Text(text = "$time - $days", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF454F5B), modifier = Modifier.padding(start = 16.dp))
     }
 }
 
@@ -284,7 +535,8 @@ fun QuickScheduleItem(quick: QuickSchedule) {
     Surface(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
         color = if(quick.id == "1") Color(0xFFE8F5E9) else Color(0xFFF4F6F8),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(8.dp),
+        onClick = { /* TODO: Trigger Quick Schedule */ }
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -331,12 +583,13 @@ fun SmartRuleItem(title: String, subtitle: String) {
 }
 
 @Composable
-fun ScheduleFilterChip(label: String, selected: Boolean) {
+fun ScheduleFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
         color = if (selected) Color.White else Color.Transparent,
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier.height(32.dp),
-        shadowElevation = if (selected) 2.dp else 0.dp
+        shadowElevation = if (selected) 2.dp else 0.dp,
+        onClick = onClick
     ) {
         Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
             Text(text = label, fontSize = 12.sp, color = if (selected) Color(0xFF212B36) else Color(0xFF919EAB))
