@@ -91,7 +91,18 @@ fun MainScreen(
         ) {
             composable<DashboardRoute> {
                 val viewModel: DashboardViewModel = hiltViewModel()
-                DashboardView(viewModel = viewModel)
+                DashboardView(
+                    viewModel = viewModel,
+                    onNavigateToAlerts = {
+                        navController.navigate(AlertsRoute) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
             }
             composable<DevicesRoute> {
                 val viewModel: DeviceViewModel = hiltViewModel()

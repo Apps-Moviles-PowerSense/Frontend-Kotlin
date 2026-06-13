@@ -21,7 +21,7 @@ object LocalModule {
             klass = AppDatabase::class.java,
             name = "PowerSense.db"
         )
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(true)
             .build()
 
     @Provides

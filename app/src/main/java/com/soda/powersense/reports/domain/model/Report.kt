@@ -11,14 +11,14 @@ data class ReportKPIs(
 
 data class MonthlyComparison(
     val month: String,
-    val value1: Int,
-    val value2: Int
+    val value1: Double,
+    val value2: Double
 )
 
 data class DepartmentMetric(
     val department: String,
-    val current: Int,
-    val previous: Int
+    val current: Double,
+    val previous: Double
 )
 
 data class ReportHistory(

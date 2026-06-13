@@ -23,16 +23,16 @@ data class ReportKPIsLocalEntity(
 data class MonthlyComparisonLocalEntity(
     @PrimaryKey
     val month: String,
-    val value1: Int,
-    val value2: Int
+    val value1: Double,
+    val value2: Double
 )
 
 @Entity(tableName = "department_metrics")
 data class DepartmentMetricLocalEntity(
     @PrimaryKey
     val department: String,
-    val current: Int,
-    val previous: Int
+    val current: Double,
+    val previous: Double
 )
 
 @Entity(tableName = "report_history")
@@ -44,6 +44,13 @@ data class ReportHistoryLocalEntity(
     val consumption: Double,
     val cost: Double,
     val variation: Int
+)
+
+@Entity(tableName = "consumption_history", primaryKeys = ["label", "period"])
+data class ConsumptionLocalEntity(
+    val label: String,
+    val period: String,
+    val consumption: Double
 )
 
 @Dao
@@ -72,6 +79,12 @@ interface ReportDao {
     @Upsert
     suspend fun upsertHistory(items: List<ReportHistoryLocalEntity>)
 
+    @Query("SELECT * FROM consumption_history WHERE period = :period")
+    fun getRealtimeConsumption(period: String): Flow<List<ConsumptionLocalEntity>>
+
+    @Upsert
+    suspend fun upsertRealtimeConsumption(items: List<ConsumptionLocalEntity>)
+
     @Query("DELETE FROM monthly_comparison")
     suspend fun clearMonthly()
 
@@ -80,4 +93,7 @@ interface ReportDao {
 
     @Query("DELETE FROM report_history")
     suspend fun clearHistory()
+
+    @Query("DELETE FROM consumption_history WHERE period = :period")
+    suspend fun clearRealtimeConsumption(period: String)
 }

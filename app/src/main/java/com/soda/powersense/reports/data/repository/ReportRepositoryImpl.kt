@@ -31,35 +31,46 @@ class ReportRepositoryImpl @Inject constructor(
         return dao.getHistory().map { entities -> entities.map { it.toDomain() } }
     }
 
+    override fun getRealtimeConsumption(period: String): Flow<List<RealtimeConsumption>> {
+        return dao.getRealtimeConsumption(period).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
     override suspend fun syncReports(type: String?, startDate: String?, endDate: String?): Result<Unit> {
         return try {
-            val kpiRes = service.getKPIs(type, startDate, endDate)
-            val monthlyRes = service.getMonthlyComparison()
-            val deptRes = service.getDepartmentMetrics(type, startDate, endDate)
-            val historyRes = service.getReportHistory()
-
-            if (kpiRes.isSuccessful && monthlyRes.isSuccessful && deptRes.isSuccessful && historyRes.isSuccessful) {
-                kpiRes.body()?.let { dao.upsertKPIs(it.toEntity()) }
-                
-                monthlyRes.body()?.let {
-                    dao.clearMonthly()
-                    dao.upsertMonthlyComparison(it.map { dto -> dto.toEntity() })
-                }
-                
-                deptRes.body()?.let {
-                    dao.clearDepartments()
-                    dao.upsertDepartmentMetrics(it.map { dto -> dto.toEntity() })
-                }
-                
-                historyRes.body()?.let {
-                    dao.clearHistory()
-                    dao.upsertHistory(it.map { dto -> dto.toEntity() })
-                }
-
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Error syncing reports"))
+            // Fetch everything, but process individually to be more resilient
+            val kpiRes = try { service.getKPIs(type, startDate, endDate) } catch(e: Exception) { null }
+            val monthlyRes = try { service.getMonthlyComparison() } catch(e: Exception) { null }
+            val deptRes = try { service.getDepartmentMetrics(type, startDate, endDate) } catch(e: Exception) { null }
+            val historyRes = try { service.getReportHistory() } catch(e: Exception) { null }
+            
+            val periodParam = when(type?.lowercase()) {
+                "semanal" -> "week"
+                "mensual" -> "month"
+                else -> "day"
             }
+            val realtimeRes = try { service.getRealtimeConsumption(periodParam) } catch(e: Exception) { null }
+
+            kpiRes?.body()?.let { dao.upsertKPIs(it.toEntity()) }
+            monthlyRes?.body()?.let {
+                dao.clearMonthly()
+                dao.upsertMonthlyComparison(it.map { dto -> dto.toEntity() })
+            }
+            deptRes?.body()?.let {
+                dao.clearDepartments()
+                dao.upsertDepartmentMetrics(it.map { dto -> dto.toEntity() })
+            }
+            historyRes?.body()?.let {
+                dao.clearHistory()
+                dao.upsertHistory(it.map { dto -> dto.toEntity() })
+            }
+            realtimeRes?.body()?.let { dtos ->
+                dao.clearRealtimeConsumption(periodParam)
+                dao.upsertRealtimeConsumption(dtos.map { it.toEntity() })
+            }
+
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

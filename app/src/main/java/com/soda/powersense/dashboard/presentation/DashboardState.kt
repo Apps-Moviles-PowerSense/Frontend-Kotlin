@@ -10,6 +10,7 @@ data class DashboardState(
     val quickDevices: List<Device> = emptyList(),
     val monthlyComparison: List<MonthlyComparison> = emptyList(),
     val recentAlerts: List<Alert> = emptyList(),
+    val selectedPeriod: String = "Diario",
     val isLoading: Boolean = false,
     val error: String? = null
 )

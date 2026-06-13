@@ -383,7 +383,7 @@ fun MonthlyComparisonChart(data: List<MonthlyComparison>) {
         return
     }
     val scrollState = rememberScrollState()
-    val maxVal = (data.maxOfOrNull { maxOf(it.value1, it.value2) } ?: 100).coerceAtLeast(1)
+    val maxVal = (data.maxOfOrNull { maxOf(it.value1, it.value2) } ?: 100.0).coerceAtLeast(1.0)
     
     Row(
         modifier = Modifier
@@ -396,8 +396,8 @@ fun MonthlyComparisonChart(data: List<MonthlyComparison>) {
         data.forEach { item ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.height(160.dp)) {
-                    val h1 = (160 * (item.value1.toFloat() / maxVal)).dp
-                    val h2 = (160 * (item.value2.toFloat() / maxVal)).dp
+                    val h1 = (160 * (item.value1 / maxVal)).dp
+                    val h2 = (160 * (item.value2 / maxVal)).dp
                     
                     Box(modifier = Modifier
                         .width(14.dp)
@@ -425,7 +425,7 @@ fun DepartmentComparisonChart(data: List<DepartmentMetric>) {
         return
     }
     val scrollState = rememberScrollState()
-    val maxVal = (data.maxOfOrNull { maxOf(it.current, it.previous) } ?: 100).coerceAtLeast(1)
+    val maxVal = (data.maxOfOrNull { maxOf(it.current, it.previous) } ?: 100.0).coerceAtLeast(1.0)
 
     Row(
         modifier = Modifier
@@ -438,8 +438,8 @@ fun DepartmentComparisonChart(data: List<DepartmentMetric>) {
         data.forEach { item ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.height(160.dp)) {
-                    val h1 = (160 * (item.current.toFloat() / maxVal)).dp
-                    val h2 = (160 * (item.previous.toFloat() / maxVal)).dp
+                    val h1 = (160 * (item.current / maxVal)).dp
+                    val h2 = (160 * (item.previous / maxVal)).dp
 
                     Box(modifier = Modifier
                         .width(14.dp)
@@ -522,7 +522,7 @@ fun HistorySection(
                     Text("Acc.", modifier = Modifier.width(70.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF919EAB), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
                 
-                Divider(modifier = Modifier.padding(vertical = 12.dp).width(500.dp), color = Color(0xFFF4F6F8))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp).width(500.dp), color = Color(0xFFF4F6F8))
                 
                 history.forEach { item ->
                     Row(
@@ -559,7 +559,7 @@ fun HistorySection(
                             }
                         }
                     }
-                    Divider(modifier = Modifier.width(500.dp), color = Color(0xFFF4F6F8))
+                    HorizontalDivider(modifier = Modifier.width(500.dp), color = Color(0xFFF4F6F8))
                 }
             }
         }

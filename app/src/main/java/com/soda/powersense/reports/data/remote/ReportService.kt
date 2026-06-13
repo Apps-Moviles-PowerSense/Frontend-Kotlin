@@ -24,4 +24,9 @@ interface ReportService {
 
     @GET("v1/analytics/reports/history")
     suspend fun getReportHistory(): Response<List<ReportHistoryDto>>
+
+    @GET("v1/analytics/reports/realtime-consumption")
+    suspend fun getRealtimeConsumption(
+        @Query("period") period: String? = null
+    ): Response<List<RealtimeConsumptionDto>>
 }

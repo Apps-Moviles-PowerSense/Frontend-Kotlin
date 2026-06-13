@@ -1,13 +1,12 @@
 package com.soda.powersense.dashboard.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Close
@@ -23,15 +22,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.soda.powersense.alerts.domain.model.Alert
-import com.soda.powersense.dashboard.domain.model.DashboardKPIs
 import com.soda.powersense.devices.domain.model.Device
 import com.soda.powersense.devices.presentation.getPowerSenseSwitchColors
-import com.soda.powersense.reports.domain.model.MonthlyComparison
 import com.soda.powersense.reports.presentation.MonthlyComparisonChart
 
 @Composable
 fun DashboardView(
-    viewModel: DashboardViewModel
+    viewModel: DashboardViewModel,
+    onNavigateToAlerts: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -51,7 +49,7 @@ fun DashboardView(
                         color = Color(0xFF454F5B)
                     )
                     Text(
-                        text = "Monitoreo y consumo energetico en tiempo real",
+                        text = "Monitoreo y consumo energético en tiempo real",
                         fontSize = 14.sp,
                         color = Color(0xFF919EAB)
                     )
@@ -107,12 +105,19 @@ fun DashboardView(
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(text = "Consumo Energético", fontWeight = FontWeight.Bold, color = Color(0xFF454F5B))
-                        Row(modifier = Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("Diario", color = Color(0xFF81C784), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            Text("Semanal", color = Color(0xFF919EAB), fontSize = 12.sp)
-                            Text("Mensual", color = Color(0xFF919EAB), fontSize = 12.sp)
+                        Row(modifier = Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            listOf("Diario", "Semanal", "Mensual").forEach { period ->
+                                val isSelected = state.selectedPeriod == period
+                                Text(
+                                    text = period,
+                                    color = if (isSelected) Color(0xFF81C784) else Color(0xFF919EAB),
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.clickable { viewModel.onPeriodChange(period) }
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         MonthlyComparisonChart(state.monthlyComparison)
                     }
                 }
@@ -121,7 +126,7 @@ fun DashboardView(
             // Quick Device Control
             item {
                 Text(text = "Control de Dispositivos", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF454F5B))
-                Text(text = "Accesos rápidos", fontSize = 14.sp, color = Color(0xFF919EAB))
+                Text(text = "Accesos rápidos (Top consumo)", fontSize = 14.sp, color = Color(0xFF919EAB))
             }
 
             item {
@@ -157,14 +162,17 @@ fun DashboardView(
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(text = "Alertas Recientes", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF454F5B))
-                    TextButton(onClick = { /* Navigate to Alerts */ }) {
+                    TextButton(onClick = onNavigateToAlerts) {
                         Text("Ver todas", color = Color(0xFF81C784))
                     }
                 }
             }
 
             items(state.recentAlerts) { alert ->
-                DashboardAlertItem(alert)
+                DashboardAlertItem(
+                    alert = alert,
+                    onDelete = { viewModel.acknowledgeAlert(it) }
+                )
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
@@ -252,7 +260,7 @@ fun SavingTipItem(title: String, message: String, bgColor: Color, iconColor: Col
 }
 
 @Composable
-fun DashboardAlertItem(alert: Alert) {
+fun DashboardAlertItem(alert: Alert, onDelete: (String) -> Unit) {
     val color = when(alert.severity.uppercase()) {
         "CRITICAL", "ERROR" -> Color(0xFFF44336)
         "WARNING" -> Color(0xFFFF9800)
@@ -271,7 +279,9 @@ fun DashboardAlertItem(alert: Alert) {
                 Text(text = alert.message, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF454F5B))
                 Text(text = "Hace poco", fontSize = 12.sp, color = Color(0xFF919EAB))
             }
-            Icon(imageVector = Icons.Outlined.Close, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+            IconButton(onClick = { onDelete(alert.id) }) {
+                Icon(imageVector = Icons.Outlined.Close, contentDescription = "Cerrar", tint = Color.Gray, modifier = Modifier.size(16.dp))
+            }
         }
     }
 }

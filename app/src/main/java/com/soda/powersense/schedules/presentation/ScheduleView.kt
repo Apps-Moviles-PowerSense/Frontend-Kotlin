@@ -503,7 +503,7 @@ fun ScheduleItemCard(schedule: Schedule, onToggle: () -> Unit) {
                 )
             }
             
-            Divider(modifier = Modifier.padding(vertical = 16.dp), color = Color(0xFFF4F6F8))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = Color(0xFFF4F6F8))
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 ScheduleTimeInfo("Encendido", schedule.startTime, "Lun a Vie", Color(0xFF4CAF50))

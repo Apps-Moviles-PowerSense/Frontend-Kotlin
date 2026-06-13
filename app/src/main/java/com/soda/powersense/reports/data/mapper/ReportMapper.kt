@@ -38,11 +38,11 @@ fun ReportKPIsLocalEntity.toDomain(): ReportKPIs {
 }
 
 fun MonthlyComparisonDto.toDomain(): MonthlyComparison {
-    return MonthlyComparison(month = month, value1 = y2023, value2 = y2024)
+    return MonthlyComparison(month = month, value1 = y2023.toDouble(), value2 = y2024.toDouble())
 }
 
 fun MonthlyComparisonDto.toEntity(): MonthlyComparisonLocalEntity {
-    return MonthlyComparisonLocalEntity(month = month, value1 = y2023, value2 = y2024)
+    return MonthlyComparisonLocalEntity(month = month, value1 = y2023.toDouble(), value2 = y2024.toDouble())
 }
 
 fun MonthlyComparisonLocalEntity.toDomain(): MonthlyComparison {
@@ -50,11 +50,11 @@ fun MonthlyComparisonLocalEntity.toDomain(): MonthlyComparison {
 }
 
 fun DepartmentMetricDto.toDomain(): DepartmentMetric {
-    return DepartmentMetric(department = departmentName, current = currentPeriod.toInt(), previous = previousPeriod.toInt())
+    return DepartmentMetric(department = departmentName, current = currentPeriod, previous = previousPeriod)
 }
 
 fun DepartmentMetricDto.toEntity(): DepartmentMetricLocalEntity {
-    return DepartmentMetricLocalEntity(department = departmentName, current = currentPeriod.toInt(), previous = previousPeriod.toInt())
+    return DepartmentMetricLocalEntity(department = departmentName, current = currentPeriod, previous = previousPeriod)
 }
 
 fun DepartmentMetricLocalEntity.toDomain(): DepartmentMetric {
@@ -71,4 +71,28 @@ fun ReportHistoryDto.toEntity(): ReportHistoryLocalEntity {
 
 fun ReportHistoryLocalEntity.toDomain(): ReportHistory {
     return ReportHistory(period = period, department = department, consumption = consumption, cost = cost, variation = variation)
+}
+
+fun RealtimeConsumptionDto.toDomain(): RealtimeConsumption {
+    return RealtimeConsumption(
+        period = period,
+        label = name,
+        consumption = value
+    )
+}
+
+fun RealtimeConsumptionDto.toEntity(): ConsumptionLocalEntity {
+    return ConsumptionLocalEntity(
+        period = period,
+        label = name,
+        consumption = value
+    )
+}
+
+fun ConsumptionLocalEntity.toDomain(): RealtimeConsumption {
+    return RealtimeConsumption(
+        period = period,
+        label = label,
+        consumption = consumption
+    )
 }

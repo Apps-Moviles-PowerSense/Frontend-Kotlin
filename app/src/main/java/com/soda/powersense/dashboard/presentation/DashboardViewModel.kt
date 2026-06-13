@@ -10,6 +10,7 @@ import com.soda.powersense.reports.domain.model.MonthlyComparison
 import com.soda.powersense.reports.domain.repository.ReportRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -24,28 +25,64 @@ class DashboardViewModel @Inject constructor(
     private val _state = MutableStateFlow(DashboardState())
     val state = _state.asStateFlow()
 
+    private var chartJob: Job? = null
+
     init {
         // Observe KPIs
         repository.getKPIs()
             .onEach { kpis -> _state.update { it.copy(kpis = kpis) } }
             .launchIn(viewModelScope)
 
-        // Observe Devices for Quick Control
+        // Observe Devices for Quick Control (Top 3 by consumption)
         deviceRepository.getDevices()
-            .onEach { devices -> _state.update { it.copy(quickDevices = devices.take(3)) } }
-            .launchIn(viewModelScope)
-
-        // Observe Monthly Comparison for Chart
-        reportRepository.getMonthlyComparison()
-            .onEach { history -> _state.update { it.copy(monthlyComparison = history) } }
+            .onEach { devices -> 
+                val top3 = devices.sortedByDescending { it.watts }.take(3)
+                _state.update { it.copy(quickDevices = top3) } 
+            }
             .launchIn(viewModelScope)
 
         // Observe Recent Alerts
         alertRepository.getAlerts()
-            .onEach { alerts -> _state.update { it.copy(recentAlerts = alerts.take(3)) } }
+            .onEach { alerts -> 
+                val recent = alerts.filter { !it.acknowledged }.take(3)
+                _state.update { it.copy(recentAlerts = recent) } 
+            }
             .launchIn(viewModelScope)
             
+        observeChartData("day")
         loadData()
+    }
+
+    fun onPeriodChange(period: String) {
+        val type = when(period) {
+            "Diario" -> "day"
+            "Semanal" -> "week"
+            "Mensual" -> "month"
+            else -> "day"
+        }
+        _state.update { it.copy(selectedPeriod = period) }
+        observeChartData(type)
+        
+        viewModelScope.launch {
+            reportRepository.syncReports(type = period)
+        }
+    }
+
+    private fun observeChartData(period: String) {
+        chartJob?.cancel()
+        chartJob = reportRepository.getRealtimeConsumption(period)
+            .onEach { history ->
+                // Map RealtimeConsumption to MonthlyComparison for the existing chart UI
+                val chartItems = history.map { 
+                    MonthlyComparison(
+                        month = it.label,
+                        value1 = it.consumption,
+                        value2 = it.consumption * 0.9 // Fake comparison
+                    )
+                }
+                _state.update { it.copy(monthlyComparison = chartItems) }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun loadData() {
@@ -53,7 +90,7 @@ class DashboardViewModel @Inject constructor(
             _state.update { it.copy(isLoading = true, error = null) }
             repository.syncKPIs()
             deviceRepository.syncDevices()
-            reportRepository.syncReports()
+            reportRepository.syncReports(type = _state.value.selectedPeriod)
             kotlin.runCatching { alertRepository.syncAlerts() }
             _state.update { it.copy(isLoading = false) }
         }
@@ -63,6 +100,12 @@ class DashboardViewModel @Inject constructor(
         val nextStatus = if (device.status.lowercase() == "active") "inactive" else "active"
         viewModelScope.launch {
             deviceRepository.setDeviceStatus(device.id, nextStatus)
+        }
+    }
+
+    fun acknowledgeAlert(id: String) {
+        viewModelScope.launch {
+            alertRepository.acknowledgeAlert(id)
         }
     }
 }

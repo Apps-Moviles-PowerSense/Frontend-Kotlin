@@ -126,7 +126,7 @@ fun ProfileView(
                                 }
                             }
                             
-                            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF4F6F8))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF4F6F8))
                             
                             ProfileDetailItem(label = "Nombre", value = user.name, icon = Icons.Default.Person)
                             ProfileDetailItem(label = "Correo", value = user.email, icon = Icons.Default.Email)
