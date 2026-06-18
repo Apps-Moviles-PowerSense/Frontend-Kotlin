@@ -96,33 +96,6 @@ fun DashboardView(
                 }
             }
 
-            // Energy Chart
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(text = "Consumo Energético", fontWeight = FontWeight.Bold, color = Color(0xFF454F5B))
-                        Row(modifier = Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            listOf("Diario", "Semanal", "Mensual").forEach { period ->
-                                val isSelected = state.selectedPeriod == period
-                                Text(
-                                    text = period,
-                                    color = if (isSelected) Color(0xFF81C784) else Color(0xFF919EAB),
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 13.sp,
-                                    modifier = Modifier.clickable { viewModel.onPeriodChange(period) }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        MonthlyComparisonChart(state.monthlyComparison)
-                    }
-                }
-            }
-
             // Quick Device Control
             item {
                 Text(text = "Control de Dispositivos", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF454F5B))

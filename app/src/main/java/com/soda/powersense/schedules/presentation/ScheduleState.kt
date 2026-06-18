@@ -12,11 +12,7 @@ data class ScheduleState(
     val selectedRoom: String? = null,
     val rooms: List<String> = emptyList(),
     val stats: ScheduleStats = ScheduleStats("0/0", 0, 0),
-    val quickSchedules: List<QuickSchedule> = listOf(
-        QuickSchedule("1", "Toda la casa", "home"),
-        QuickSchedule("2", "Solo dormitorios", "bed"),
-        QuickSchedule("3", "Areas comunes", "apartment")
-    ),
+
     val isCreateDialogOpen: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null

@@ -174,30 +174,6 @@ fun ScheduleView(
                 }
             }
 
-            // Quick Schedules
-            item {
-                Text(
-                    text = "Programación Rápida",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF454F5B),
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
-                    Column(modifier = Modifier.padding(8.dp)) {
-                        state.quickSchedules.forEach { quick ->
-                            QuickScheduleItem(quick)
-                        }
-                    }
-                }
-            }
 
             // Statistics
             item {
@@ -219,33 +195,6 @@ fun ScheduleView(
                         StatRow("Dispositivos programados", state.stats.scheduledDevices)
                         StatRow("Horarios activos", state.stats.activeSchedules.toString())
                         StatRow("Ahorro estimado", "${state.stats.estimatedSavings}%", Color(0xFF4CAF50))
-                    }
-                }
-            }
-
-            // Smart Rules
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF66BB6A))
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text("Reglas Inteligentes", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        SmartRuleItem("Modo Nocturno", "Apaga luces automáticamente")
-                        SmartRuleItem("Ahorro de Energía", "Optimiza según tarifas")
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { /* TODO */ },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Agregar Regla", color = Color.White)
-                        }
                     }
                 }
             }
@@ -525,29 +474,6 @@ fun ScheduleTimeInfo(label: String, time: String, days: String, dotColor: Color)
     }
 }
 
-@Composable
-fun QuickScheduleItem(quick: QuickSchedule) {
-    val icon = when(quick.icon) {
-        "home" -> Icons.Default.Home
-        "bed" -> Icons.Default.Bed
-        else -> Icons.Default.Apartment
-    }
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(8.dp),
-        color = if(quick.id == "1") Color(0xFFE8F5E9) else Color(0xFFF4F6F8),
-        shape = RoundedCornerShape(8.dp),
-        onClick = { /* TODO: Trigger Quick Schedule */ }
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(imageVector = icon, contentDescription = null, tint = if(quick.id == "1") Color(0xFF4CAF50) else Color(0xFF637381))
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(text = quick.name, color = if(quick.id == "1") Color(0xFF4CAF50) else Color(0xFF637381))
-        }
-    }
-}
 
 @Composable
 fun StatRow(label: String, value: String, valueColor: Color = Color(0xFF454F5B)) {

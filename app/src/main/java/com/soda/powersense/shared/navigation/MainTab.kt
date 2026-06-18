@@ -39,12 +39,12 @@ enum class MainTab(
         iconFilled = Icons.Filled.Schedule,
         route = SchedulesRoute
     ),
-    Reports(
+    /*Reports(
         label = "Reportes",
         icon = Icons.Outlined.Assessment,
         iconFilled = Icons.Filled.Assessment,
         route = ReportsRoute
-    ),
+    ),*/
     Alerts(
         label = "Alertas",
         icon = Icons.Outlined.Notifications,

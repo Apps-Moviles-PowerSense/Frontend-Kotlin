@@ -174,36 +174,7 @@ fun AlertsView(
                 }
             }
 
-            // Settings Section
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
-                    Column(modifier = Modifier.padding(24.dp)) {
-                        Text(
-                            text = "Configuración de Alertas",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF454F5B)
-                        )
-                        Text(
-                            text = "Personaliza que notificaciones deseas recibir",
-                            fontSize = 14.sp,
-                            color = Color(0xFF919EAB)
-                        )
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
-                        
-                        SettingsToggleItem("Consumo excesivo", "Notificar cuando el consumo supere los límites", true)
-                        SettingsToggleItem("Dispositivos desconectados", "Alerta cuando un dispositivo pierda conexión", true)
-                        SettingsToggleItem("Programaciones completadas", "Confirmar cuando se ejecuten programaciones", false)
-                        SettingsToggleItem("Actualizaciones del sistema", "Notificar sobre nuevas versiones disponibles", true)
-                    }
-                }
-            }
+
             
             item { Spacer(modifier = Modifier.height(20.dp)) }
         }
