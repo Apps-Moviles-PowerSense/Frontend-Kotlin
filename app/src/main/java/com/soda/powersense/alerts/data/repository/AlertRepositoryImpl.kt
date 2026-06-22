@@ -8,6 +8,7 @@ import com.soda.powersense.alerts.domain.model.Alert
 import com.soda.powersense.alerts.domain.repository.AlertRepository
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 class AlertRepositoryImpl @Inject constructor(
@@ -32,8 +33,31 @@ class AlertRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun acknowledgeAlert(id: String) {
-        alertDao.acknowledgeAlert(id)
+    override suspend fun acknowledgeAlert(id: String): Result<Unit> {
+        return try {
+            val response = alertService.acknowledgeAlert(id)
+            if (response.isSuccessful) {
+                alertDao.acknowledgeAlert(id)
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Error acknowledging alert: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun acknowledgeAllAlerts(): Result<Unit> {
+        return try {
+            val unacknowledged = alertDao.getAlerts().first().filter { !it.acknowledged }
+            unacknowledged.forEach { alert ->
+                alertService.acknowledgeAlert(alert.id)
+                alertDao.acknowledgeAlert(alert.id)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun clearLocalAlerts() {

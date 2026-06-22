@@ -32,9 +32,5 @@ interface AlertService {
     ): AlertDto
 
     @PATCH("v1/analytics/alerts/{id}/acknowledge")
-    suspend fun acknowledgeAlert(@Path("id") id: String): AlertDto
-
-    /*@GET("v1/analytics/alerts/recent")
-    suspend fun getRecentAlerts(): Response<?>*/
-
+    suspend fun acknowledgeAlert(@Path("id") id: String): Response<AlertDto>
 }

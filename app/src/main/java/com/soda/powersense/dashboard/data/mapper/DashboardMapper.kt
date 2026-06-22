@@ -1,5 +1,6 @@
 package com.soda.powersense.dashboard.data.mapper
 
+import com.soda.powersense.dashboard.data.local.DashboardKPIsEntity
 import com.soda.powersense.dashboard.data.remote.DashboardKPIsResponse
 import com.soda.powersense.dashboard.domain.model.DashboardKPIs
 
@@ -9,6 +10,41 @@ fun DashboardKPIsResponse.toDomain(): DashboardKPIs {
         activeDevices = activeDevices.toInt(),
         totalConsumption = totalConsumptionKWh,
         totalCost = totalCostUSD,
-        efficiency = efficiencyPct.toDouble()
+        efficiency = efficiencyPct,
+        monthlySavings = monthlySavings,
+        estimatedCost = estimatedMonthlyCost,
+        consumptionVariation = comparison.consumptionPct,
+        costVariation = comparison.costPct,
+        efficiencyVariation = comparison.efficiencyPct
+    )
+}
+
+fun DashboardKPIsResponse.toEntity(): DashboardKPIsEntity {
+    return DashboardKPIsEntity(
+        totalDevices = totalDevices,
+        activeDevices = activeDevices.toInt(),
+        totalConsumption = totalConsumptionKWh,
+        totalCost = totalCostUSD,
+        efficiency = efficiencyPct,
+        monthlySavings = monthlySavings,
+        estimatedCost = estimatedMonthlyCost,
+        consumptionVariation = comparison.consumptionPct,
+        costVariation = comparison.costPct,
+        efficiencyVariation = comparison.efficiencyPct
+    )
+}
+
+fun DashboardKPIsEntity.toDomain(): DashboardKPIs {
+    return DashboardKPIs(
+        totalDevices = totalDevices,
+        activeDevices = activeDevices,
+        totalConsumption = totalConsumption,
+        totalCost = totalCost,
+        efficiency = efficiency,
+        monthlySavings = monthlySavings,
+        estimatedCost = estimatedCost,
+        consumptionVariation = consumptionVariation,
+        costVariation = costVariation,
+        efficiencyVariation = efficiencyVariation
     )
 }

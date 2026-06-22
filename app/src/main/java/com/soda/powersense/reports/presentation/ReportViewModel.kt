@@ -5,9 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.soda.powersense.reports.domain.repository.ReportRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -19,27 +17,48 @@ class ReportViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     init {
+        repository.getKPIs()
+            .onEach { kpis -> _state.update { it.copy(kpis = kpis) } }
+            .launchIn(viewModelScope)
+
+        repository.getMonthlyComparison()
+            .onEach { items -> _state.update { it.copy(monthlyComparison = items) } }
+            .launchIn(viewModelScope)
+
+        repository.getDepartmentMetrics()
+            .onEach { items -> _state.update { it.copy(departmentMetrics = items) } }
+            .launchIn(viewModelScope)
+
+        repository.getReportHistory()
+            .onEach { items -> _state.update { it.copy(reportHistory = items) } }
+            .launchIn(viewModelScope)
+
         loadData()
+    }
+
+    fun onReportTypeChange(type: String) {
+        _state.update { it.copy(reportType = type) }
+    }
+
+    fun onStartDateChange(date: String) {
+        _state.update { it.copy(startDate = date) }
+    }
+
+    fun onEndDateChange(date: String) {
+        _state.update { it.copy(endDate = date) }
     }
 
     fun loadData() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            
-            val kpiResult = repository.getKPIs()
-            val consumptionResult = repository.getRealtimeConsumption("day")
-
-            if (kpiResult.isSuccess && consumptionResult.isSuccess) {
-                _state.update { it.copy(
-                    kpis = kpiResult.getOrNull(),
-                    consumptionHistory = consumptionResult.getOrDefault(emptyList()),
-                    isLoading = false
-                ) }
-            } else {
-                _state.update { it.copy(
-                    error = "Failed to load report data",
-                    isLoading = false
-                ) }
+            repository.syncReports(
+                type = _state.value.reportType,
+                startDate = _state.value.startDate,
+                endDate = _state.value.endDate
+            ).onFailure { error ->
+                _state.update { it.copy(error = error.message, isLoading = false) }
+            }.onSuccess {
+                _state.update { it.copy(isLoading = false) }
             }
         }
     }

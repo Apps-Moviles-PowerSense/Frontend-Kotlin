@@ -1,10 +1,33 @@
 package com.soda.powersense.reports.domain.model
 
 data class ReportKPIs(
-    val dailyConsumption: Double,
-    val weeklyConsumption: Double,
-    val monthlyConsumption: Double,
-    val costSaved: Double
+    val totalConsumption: Double,
+    val totalCost: Double,
+    val efficiency: Int,
+    val consumptionVariation: Int,
+    val costVariation: Int,
+    val efficiencyVariation: Int
+)
+
+data class MonthlyComparison(
+    val month: String,
+    val value1: Double,
+    val value2: Double
+)
+
+data class DepartmentMetric(
+    val department: String,
+    val current: Double,
+    val previous: Double
+)
+
+data class ReportHistory(
+    val id: String = "",
+    val period: String,
+    val department: String,
+    val consumption: Double,
+    val cost: Double,
+    val variation: Int
 )
 
 data class RealtimeConsumption(
